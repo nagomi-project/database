@@ -24,7 +24,6 @@ goose -dir ./sql/migrations create init sql
 > GOOSE_DRIVER=postgres
 > GOOSE_DBSTRING=postgres://admin:admin@localhost:5432/admin_db
 > ```
-
 ```bash
 goose -dir ./sql/migrations up
 ```

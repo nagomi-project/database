@@ -8,6 +8,8 @@ import (
 	"github.com/nagomi-project/database/internal/gen"
 )
 
+type TransactionFunc func(ctx context.Context, txDb *Database) error
+
 const (
 	transactionTimeout = time.Second * 60
 )
@@ -50,7 +52,7 @@ func (db *Database) Tx() gen.DBTX {
 // Transactions are given 1 minute to execute, otherwise it will timeout.
 //
 // This is useful in circumstances where you need to execute other logic inside of the transaction.
-func (db *Database) WithTx(ctx context.Context, txFn func(db *Database) error) error {
+func (db *Database) WithTx(ctx context.Context, txFn TransactionFunc) error {
 	ctx, cancel := context.WithTimeout(ctx, transactionTimeout)
 	defer cancel()
 
@@ -67,7 +69,7 @@ func (db *Database) WithTx(ctx context.Context, txFn func(db *Database) error) e
 	}()
 
 	// uses a new database object with the transaction
-	if err := txFn((&Database{
+	if err := txFn(ctx, (&Database{
 		pool:    db.pool,
 		dbtx:    tx,
 		queries: db.queries,

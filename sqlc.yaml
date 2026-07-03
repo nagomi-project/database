@@ -9,3 +9,14 @@ sql:
         package: "gen"
         out: "internal/gen"
         sql_package: "pgx/v5"
+
+        emit_methods_with_db_argument: true
+        json_tags_id_uppercase: true
+        emit_enum_valid_method: true
+        emit_all_enum_values: true
+
+        overrides:
+          # The snowflake type will check to ensure that the string is 
+          # digits only and more than 17 characters long.
+          - db_type: "snowflake"
+            go_type: "string"

@@ -14,8 +14,9 @@ sqlc is used to generate internal methods used for the database.
 ### Migrations
 goose is used to generate and run migrations for the database. Please refer to [goose's documentation](https://pressly.github.io/goose/documentation/annotations) for more information on how it works.
 #### Creating New Migration
+Replace `{MIGRATION_NAME}` with the name of the migration file.
 ```bash
-goose -dir ./sql/migrations create init sql
+goose -dir ./sql/migrations create {MIGRATION_NAME} sql
 ```
 #### Running `up` Migrations
 > [!NOTE]

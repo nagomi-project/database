@@ -9,7 +9,10 @@ Database utilities for Nagomi.
 
 ## Development
 ### Internal Methods
-sqlc is used to generate internal methods used for the database.
+sqlc is used to generate internal methods used for the database. sqlc was chosen since it will error if queries have anything that do not match the schema, making database development easier. To update the schema's generation, simply run the command below:
+```bash
+sqlc generate
+```
 
 ### Migrations
 goose is used to generate and run migrations for the database. Please refer to [goose's documentation](https://pressly.github.io/goose/documentation/annotations) for more information on how it works.

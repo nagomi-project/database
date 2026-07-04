@@ -18,6 +18,8 @@ type Database struct {
 	pool    *pgxpool.Pool
 	dbtx    gen.DBTX
 	queries *gen.Queries
+
+	GuildSettings *guildSettings
 }
 
 // NewDatabase will return a new Database object that can be used for database operations.
@@ -33,6 +35,8 @@ func NewDatabase(pool *pgxpool.Pool) *Database {
 
 // init will initalize all of the stores for the database.
 func (db *Database) init() *Database {
+	db.GuildSettings = newGuildSettings(db)
+
 	return db
 }
 

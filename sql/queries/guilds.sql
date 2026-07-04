@@ -1,5 +1,17 @@
--- name: UpsertGuildRegistry :one
--- Crates a new guild registry entry or updates the time of an existing one.
+-- name: RegisterGuildIfMissing :exec
+-- Inserts a guild into the registy if it is not already registered.
+INSERT INTO guilds_registry (guild_id)
+VALUES (@guild_id)
+ON CONFLICT (guild_id) DO NOTHING;
+
+-- name: GetRegisteredGuild :one
+-- Fetches a guild's registry information.
+SELECT * FROM guilds_registry
+WHERE
+    guild_id = @guild_id;
+
+-- name: UpdateGuildRegistryTime :exec
+-- Updates when a guild settings were modified.
 INSERT INTO guilds_registry (guild_id)
 VALUES (@guild_id)
 ON CONFLICT (guild_id) DO

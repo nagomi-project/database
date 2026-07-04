@@ -9,6 +9,32 @@ import (
 	"context"
 )
 
+const getRegisteredGuild = `-- name: GetRegisteredGuild :one
+SELECT created_at, updated_at, guild_id FROM guilds_registry
+WHERE
+    guild_id = $1
+`
+
+// Fetches a guild's registry information.
+func (q *Queries) GetRegisteredGuild(ctx context.Context, db DBTX, guildID string) (GuildsRegistry, error) {
+	row := db.QueryRow(ctx, getRegisteredGuild, guildID)
+	var i GuildsRegistry
+	err := row.Scan(&i.CreatedAt, &i.UpdatedAt, &i.GuildID)
+	return i, err
+}
+
+const registerGuildIfMissing = `-- name: RegisterGuildIfMissing :exec
+INSERT INTO guilds_registry (guild_id)
+VALUES ($1)
+ON CONFLICT (guild_id) DO NOTHING
+`
+
+// Inserts a guild into the registy if it is not already registered.
+func (q *Queries) RegisterGuildIfMissing(ctx context.Context, db DBTX, guildID string) error {
+	_, err := db.Exec(ctx, registerGuildIfMissing, guildID)
+	return err
+}
+
 const removeLogChannel = `-- name: RemoveLogChannel :one
 DELETE FROM log_channels
 WHERE
@@ -36,7 +62,7 @@ func (q *Queries) RemoveLogChannel(ctx context.Context, db DBTX, arg RemoveLogCh
 	return i, err
 }
 
-const upsertGuildRegistry = `-- name: UpsertGuildRegistry :one
+const updateGuildRegistryTime = `-- name: UpdateGuildRegistryTime :exec
 INSERT INTO guilds_registry (guild_id)
 VALUES ($1)
 ON CONFLICT (guild_id) DO
@@ -45,12 +71,10 @@ UPDATE SET
 RETURNING created_at, updated_at, guild_id
 `
 
-// Crates a new guild registry entry or updates the time of an existing one.
-func (q *Queries) UpsertGuildRegistry(ctx context.Context, db DBTX, guildID string) (GuildsRegistry, error) {
-	row := db.QueryRow(ctx, upsertGuildRegistry, guildID)
-	var i GuildsRegistry
-	err := row.Scan(&i.CreatedAt, &i.UpdatedAt, &i.GuildID)
-	return i, err
+// Updates when a guild settings were modified.
+func (q *Queries) UpdateGuildRegistryTime(ctx context.Context, db DBTX, guildID string) error {
+	_, err := db.Exec(ctx, updateGuildRegistryTime, guildID)
+	return err
 }
 
 const upsertLogChannel = `-- name: UpsertLogChannel :one

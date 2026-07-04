@@ -18,7 +18,7 @@ func newGuildSettings(db *Database) *guildSettings {
 func (g *guildSettings) CreateOrUpdateLogChannel(ctx context.Context, guildId, channelId, userId string, channelType LogChannelType, source ActionLogSource) (*gen.LogChannel, error) {
 	var channel *gen.LogChannel
 	if err := g.db.WithTx(ctx, func(ctx context.Context, txDb *Database) error {
-		if _, err := g.db.queries.UpsertGuildRegistry(ctx, txDb.dbtx, guildId); err != nil {
+		if err := g.db.queries.UpdateGuildRegistryTime(ctx, txDb.dbtx, guildId); err != nil {
 			return err
 		}
 
@@ -52,7 +52,7 @@ func (g *guildSettings) CreateOrUpdateLogChannel(ctx context.Context, guildId, c
 
 func (g *guildSettings) RemoveLogChannel(ctx context.Context, guildId, userId string, channelType LogChannelType, source ActionLogSource) error {
 	return g.db.WithTx(ctx, func(ctx context.Context, txDb *Database) error {
-		if _, err := g.db.queries.UpsertGuildRegistry(ctx, txDb.dbtx, guildId); err != nil {
+		if err := g.db.queries.UpdateGuildRegistryTime(ctx, txDb.dbtx, guildId); err != nil {
 			return err
 		}
 

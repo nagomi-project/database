@@ -1,7 +1,7 @@
 -- name: LogAction :one
 -- Logs an action that was done.
 WITH next_log AS (
-    INSERT INTO next_log_ids (guild_id, id)
+    INSERT INTO next_log_ids (guild_id, next_id)
     VALUES (@guild_id, 2)
     ON CONFLICT (guild_id) DO UPDATE SET
         next_id = next_log_ids.next_id + 1
@@ -16,7 +16,7 @@ INSERT INTO action_logs (
     action
 )
 SELECT
-    next_log.next_id,
+    next_log.id,
     @guild_id,
     @actor_id,
     @action_type,

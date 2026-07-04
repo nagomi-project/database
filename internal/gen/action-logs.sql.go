@@ -11,7 +11,7 @@ import (
 
 const logAction = `-- name: LogAction :one
 WITH next_log AS (
-    INSERT INTO next_log_ids (guild_id, id)
+    INSERT INTO next_log_ids (guild_id, next_id)
     VALUES ($1, 2)
     ON CONFLICT (guild_id) DO UPDATE SET
         next_id = next_log_ids.next_id + 1
@@ -26,7 +26,7 @@ INSERT INTO action_logs (
     action
 )
 SELECT
-    next_log.next_id,
+    next_log.id,
     $1,
     $2,
     $3,

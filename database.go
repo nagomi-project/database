@@ -20,6 +20,7 @@ type Database struct {
 	queries *gen.Queries
 
 	GuildSettings *guildSettings
+	Infractions   *infractions
 }
 
 // NewDatabase will return a new Database object that can be used for database operations.
@@ -36,27 +37,16 @@ func NewDatabase(pool *pgxpool.Pool) *Database {
 // init will initalize all of the stores for the database.
 func (db *Database) init() *Database {
 	db.GuildSettings = newGuildSettings(db)
+	db.Infractions = newInfractions(db)
 
 	return db
 }
 
-// Queries will return all of the available queries.
-func (db *Database) Queries() *gen.Queries {
-	return db.queries
-}
-
-// Tx will return the current transaction.
-//
-// This has to be passed in whenever a query is called.
-func (db *Database) Tx() gen.DBTX {
-	return db.dbtx
-}
-
-// WithTx will allow running a transaction inside of a callback function.
+// withTx will allow running a transaction inside of a callback function.
 // Transactions are given 1 minute to execute, otherwise it will timeout.
 //
 // This is useful in circumstances where you need to execute other logic inside of the transaction.
-func (db *Database) WithTx(ctx context.Context, txFn TransactionFunc) error {
+func (db *Database) withTx(ctx context.Context, txFn TransactionFunc) error {
 	ctx, cancel := context.WithTimeout(ctx, transactionTimeout)
 	defer cancel()
 

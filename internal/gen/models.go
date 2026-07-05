@@ -124,6 +124,149 @@ func AllActionLogTypeValues() []ActionLogType {
 	}
 }
 
+type AppealStatus string
+
+const (
+	AppealStatusSubmitted AppealStatus = "submitted"
+	AppealStatusApproved  AppealStatus = "approved"
+	AppealStatusDenied    AppealStatus = "denied"
+	AppealStatusBlocked   AppealStatus = "blocked"
+	AppealStatusUnblocked AppealStatus = "unblocked"
+)
+
+func (e *AppealStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AppealStatus(s)
+	case string:
+		*e = AppealStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AppealStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAppealStatus struct {
+	AppealStatus AppealStatus
+	Valid        bool // Valid is true if AppealStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAppealStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AppealStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AppealStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAppealStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AppealStatus), nil
+}
+
+func (e AppealStatus) Valid() bool {
+	switch e {
+	case AppealStatusSubmitted,
+		AppealStatusApproved,
+		AppealStatusDenied,
+		AppealStatusBlocked,
+		AppealStatusUnblocked:
+		return true
+	}
+	return false
+}
+
+func AllAppealStatusValues() []AppealStatus {
+	return []AppealStatus{
+		AppealStatusSubmitted,
+		AppealStatusApproved,
+		AppealStatusDenied,
+		AppealStatusBlocked,
+		AppealStatusUnblocked,
+	}
+}
+
+type InfractionAction string
+
+const (
+	InfractionActionNote    InfractionAction = "note"
+	InfractionActionWarn    InfractionAction = "warn"
+	InfractionActionMute    InfractionAction = "mute"
+	InfractionActionUnmute  InfractionAction = "unmute"
+	InfractionActionKick    InfractionAction = "kick"
+	InfractionActionBan     InfractionAction = "ban"
+	InfractionActionUnban   InfractionAction = "unban"
+	InfractionActionSoftban InfractionAction = "softban"
+)
+
+func (e *InfractionAction) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InfractionAction(s)
+	case string:
+		*e = InfractionAction(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InfractionAction: %T", src)
+	}
+	return nil
+}
+
+type NullInfractionAction struct {
+	InfractionAction InfractionAction
+	Valid            bool // Valid is true if InfractionAction is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInfractionAction) Scan(value interface{}) error {
+	if value == nil {
+		ns.InfractionAction, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InfractionAction.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInfractionAction) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InfractionAction), nil
+}
+
+func (e InfractionAction) Valid() bool {
+	switch e {
+	case InfractionActionNote,
+		InfractionActionWarn,
+		InfractionActionMute,
+		InfractionActionUnmute,
+		InfractionActionKick,
+		InfractionActionBan,
+		InfractionActionUnban,
+		InfractionActionSoftban:
+		return true
+	}
+	return false
+}
+
+func AllInfractionActionValues() []InfractionAction {
+	return []InfractionAction{
+		InfractionActionNote,
+		InfractionActionWarn,
+		InfractionActionMute,
+		InfractionActionUnmute,
+		InfractionActionKick,
+		InfractionActionBan,
+		InfractionActionUnban,
+		InfractionActionSoftban,
+	}
+}
+
 type LogChannelType string
 
 const (
@@ -198,10 +341,83 @@ type ActionLog struct {
 	Action    string
 }
 
+type BanAppealLog struct {
+	LogID      int64
+	CreatedAt  pgtype.Timestamptz
+	GuildID    string
+	CaseNumber int32
+	ActorID    string
+	Status     AppealStatus
+}
+
 type GuildsRegistry struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	GuildID   string
+}
+
+type InfractionActiveBan struct {
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	GuildID         string
+	CaseNumber      int32
+	MemberID        string
+	CanSubmitAppeal bool
+	AppealPending   bool
+	AppealableAt    pgtype.Timestamptz
+}
+
+type InfractionDetail struct {
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	GuildID     string
+	CaseNumber  int32
+	MemberID    string
+	ModeratorID string
+	Hidden      bool
+	Action      InfractionAction
+	Reason      pgtype.Text
+	Active      bool
+	Appealable  bool
+	MessageUrl  pgtype.Text
+}
+
+type InfractionExpirySchedule struct {
+	ExpiresAt  pgtype.Timestamptz
+	GuildID    string
+	CaseNumber int32
+	MemberID   string
+	Action     InfractionAction
+}
+
+type InfractionLog struct {
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	GuildID     string
+	CaseNumber  int32
+	MemberID    string
+	ModeratorID string
+	Hidden      bool
+	Action      InfractionAction
+	Reason      pgtype.Text
+}
+
+type InfractionProofMessage struct {
+	GuildID    string
+	CaseNumber int32
+	MessageUrl string
+}
+
+type InfractionSetting struct {
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+	GuildID                string
+	MutedRoleID            pgtype.Text
+	AppealDuration         int16
+	InfractionProofID      pgtype.Text
+	RequestInfractionProof bool
 }
 
 type LogChannel struct {
@@ -210,6 +426,11 @@ type LogChannel struct {
 	Type      LogChannelType
 	GuildID   string
 	ChannelID string
+}
+
+type NextInfractionID struct {
+	GuildID string
+	NextID  int64
 }
 
 type NextLogID struct {

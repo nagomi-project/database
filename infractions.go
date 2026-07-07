@@ -231,7 +231,7 @@ type ActiveBanDetails struct {
 }
 
 // GetActiveBanDetails will fetch all of the information on a member's active ban.
-func (i *infractions) GetActiveBanDetails(ctx context.Context, guildId, memberId string) (any, error) {
+func (i *infractions) GetActiveBanDetails(ctx context.Context, guildId, memberId string) (*ActiveBanDetails, error) {
 	activeBan, err := i.db.queries.GetActiveBan(ctx, i.db.dbtx, gen.GetActiveBanParams{
 		GuildID:  guildId,
 		MemberID: memberId,

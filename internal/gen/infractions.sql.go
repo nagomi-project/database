@@ -297,6 +297,56 @@ func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemb
 	return items, nil
 }
 
+const getMemberInfractionsPage = `-- name: GetMemberInfractionsPage :many
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+WHERE
+    guild_id = $1
+    AND member_id = $2
+OFFSET (GREATEST($3::SMALLINT, 1) - 1) * 10
+LIMIT 10
+`
+
+type GetMemberInfractionsPageParams struct {
+	GuildID  string
+	MemberID string
+	Page     int16
+}
+
+// Fetches a list of infractions. This uses a pre-defined offset for "pagination".
+func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg GetMemberInfractionsPageParams) ([]InfractionDetail, error) {
+	rows, err := db.Query(ctx, getMemberInfractionsPage, arg.GuildID, arg.MemberID, arg.Page)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InfractionDetail
+	for rows.Next() {
+		var i InfractionDetail
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ExpiresAt,
+			&i.GuildID,
+			&i.CaseNumber,
+			&i.MemberID,
+			&i.ModeratorID,
+			&i.Hidden,
+			&i.Action,
+			&i.Reason,
+			&i.Active,
+			&i.Appealable,
+			&i.MessageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const infractMember = `-- name: InfractMember :one
 WITH next_infraction AS (
     INSERT INTO next_infraction_ids (guild_id, next_id)
@@ -456,6 +506,26 @@ func (q *Queries) LogBanAppealStatus(ctx context.Context, db DBTX, arg LogBanApp
 		&i.Status,
 	)
 	return i, err
+}
+
+const modifyScheduledInfraction = `-- name: ModifyScheduledInfraction :exec
+UPDATE infraction_expiry_schedule SET
+    expires_at = $1
+WHERE
+    guild_id = $2
+    AND case_number = $3
+`
+
+type ModifyScheduledInfractionParams struct {
+	ModifiedDuration pgtype.Timestamptz
+	GuildID          string
+	CaseID           int32
+}
+
+// Modifies the duration for a scheduled infraction.
+func (q *Queries) ModifyScheduledInfraction(ctx context.Context, db DBTX, arg ModifyScheduledInfractionParams) error {
+	_, err := db.Exec(ctx, modifyScheduledInfraction, arg.ModifiedDuration, arg.GuildID, arg.CaseID)
+	return err
 }
 
 const registerInfractionSettingsIfMissing = `-- name: RegisterInfractionSettingsIfMissing :exec

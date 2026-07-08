@@ -34,6 +34,15 @@ WHERE
     guild_id = @guild_id
     AND case_number = @case_id;
 
+-- name: GetMemberInfractionsPage :many
+-- Fetches a list of infractions. This uses a pre-defined offset for "pagination".
+SELECT * FROM infraction_details
+WHERE
+    guild_id = @guild_id
+    AND member_id = @member_id
+OFFSET (GREATEST(@page::SMALLINT, 1) - 1) * 10
+LIMIT 10;
+
 -- name: GetMemberInfractions :many
 -- Fetches all of the infractions for a member
 SELECT * FROM infraction_details
@@ -117,6 +126,14 @@ INSERT INTO infraction_expiry_schedule (
 VALUES (@expiry, @guild_id, @case_id, @member_id, @action)
 ON CONFLICT DO NOTHING
 RETURNING *;
+
+-- name: ModifyScheduledInfraction :exec
+-- Modifies the duration for a scheduled infraction.
+UPDATE infraction_expiry_schedule SET
+    expires_at = @modified_duration
+WHERE
+    guild_id = @guild_id
+    AND case_number = @case_id;
 
 -- name: InsertActiveBan :exec
 -- Inserts a ban.

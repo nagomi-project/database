@@ -8,7 +8,7 @@ import (
 
 // NullableTimeToTimestamptz will return a pgtype.Timestamptz
 func NullableTimeToTimestamptz(t *time.Time) pgtype.Timestamptz {
-	if t != nil {
+	if t != nil && !t.IsZero() { // if time is zero, should just assume it's not valid.
 		return pgtype.Timestamptz{Time: *t, Valid: true}
 	}
 

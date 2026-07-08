@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,7 +59,7 @@ func newInfractionEntryFromDetails(d gen.InfractionDetail) *InfractionEntry {
 	}
 
 	if d.ExpiresAt.Valid {
-		e.ExpiresAt = &d.CreatedAt.Time
+		e.ExpiresAt = &d.ExpiresAt.Time
 	}
 
 	if d.Reason.Valid {
@@ -183,6 +184,38 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 	return &entry, nil
 }
 
+// GetInfractionCaseDetails will get the details of an infraction case based on a provided id.
+func (i *infractions) GetInfractionCaseDetails(ctx context.Context, guildId string, caseId int32) (*InfractionEntry, error) {
+	infraction, err := i.db.queries.GetInfractionByCaseId(ctx, i.db.dbtx, gen.GetInfractionByCaseIdParams{
+		GuildID: guildId,
+		CaseID:  caseId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return newInfractionEntryFromDetails(infraction), nil
+}
+
+// GetMemberInfractionCasePage will get a page of member infractions. Each page returns 10 infractions maximum.
+func (i *infractions) GetMemberInfractionCasePage(ctx context.Context, guildId, memberId string, page int) ([]InfractionEntry, error) {
+	infractionsPage, err := i.db.queries.GetMemberInfractionsPage(ctx, i.db.dbtx, gen.GetMemberInfractionsPageParams{
+		GuildID:  guildId,
+		MemberID: memberId,
+		Page:     int16(page),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	infractions := make([]InfractionEntry, len(infractionsPage))
+	for i, inf := range infractionsPage {
+		infractions[i] = *newInfractionEntryFromDetails(inf)
+	}
+
+	return infractions, nil
+}
+
 // UpdateInfractionCaseReason will update the reason for an existing case.
 func (i *infractions) UpdateInfractionCaseReason(ctx context.Context, guildId string, caseId int32, reason string) (*InfractionEntry, error) {
 	updatedEntry, err := i.db.queries.UpdateInfractionCaseDetails(ctx, i.db.dbtx, gen.UpdateInfractionCaseDetailsParams{
@@ -212,6 +245,89 @@ func (i *infractions) UpdateInfractionCaseVisibility(ctx context.Context, guildI
 	}
 
 	return newInfractionEntryFromDetails(updatedEntry), nil
+}
+
+// UpdateInfractionCaseDuration will update the duration of an existing infraction case.
+//
+// The duration will be set based on the original infraction time and not from `time.Now()`. If there is no original infraction time,
+// `time.Now()` will be used instead (this can happen with a mute or ban with no duration set).
+func (i *infractions) UpdateInfractionCaseDuration(ctx context.Context, guildId string, caseId int32, duration time.Duration) (*InfractionEntry, error) {
+	var infraction *InfractionEntry
+	if err := i.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
+		originalEntry, err := i.db.queries.GetInfractionByCaseId(ctx, txDb.dbtx, gen.GetInfractionByCaseIdParams{
+			GuildID: guildId,
+			CaseID:  caseId,
+		})
+		if err != nil {
+			return err
+		}
+
+		switch originalEntry.Action {
+		case InfractionActionBan, InfractionActionMute:
+			expiry := time.Now().Add(duration)
+			if originalEntry.CreatedAt.Valid {
+				expiry = originalEntry.CreatedAt.Time.Add(duration)
+			}
+
+			if err := i.db.queries.ModifyScheduledInfraction(ctx, txDb.dbtx, gen.ModifyScheduledInfractionParams{
+				GuildID:          guildId,
+				CaseID:           caseId,
+				ModifiedDuration: NullableTimeToTimestamptz(&expiry),
+			}); err != nil {
+				return err
+			}
+
+			originalEntry.ExpiresAt = NullableTimeToTimestamptz(&expiry)
+		default:
+			return fmt.Errorf("unsupported type") // todo: errors.
+		}
+
+		infraction = newInfractionEntryFromDetails(originalEntry)
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return infraction, nil
+}
+
+// UpdateInfractionCaseExpiry will update the raw expiration time for an existing infraction case.
+//
+// If the expiry time IsZero, it will be set as a permanent duration instead.
+func (i *infractions) UpdateInfractionCaseExpiry(ctx context.Context, guildId string, caseId int32, expiry time.Time) (*InfractionEntry, error) {
+	var infraction *InfractionEntry
+	if err := i.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
+		originalEntry, err := i.db.queries.GetInfractionByCaseId(ctx, i.db.dbtx, gen.GetInfractionByCaseIdParams{
+			GuildID: guildId,
+			CaseID:  caseId,
+		})
+		if err != nil {
+			return err
+		}
+
+		switch originalEntry.Action {
+		case InfractionActionBan, InfractionActionMute:
+
+			if err := i.db.queries.ModifyScheduledInfraction(ctx, txDb.dbtx, gen.ModifyScheduledInfractionParams{
+				GuildID:          guildId,
+				CaseID:           caseId,
+				ModifiedDuration: NullableTimeToTimestamptz(&expiry),
+			}); err != nil {
+				return err
+			}
+
+			infraction = newInfractionEntryFromDetails(originalEntry)
+		default:
+			return fmt.Errorf("unsupported type") // todo: errors.
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return infraction, nil
 }
 
 type BanAppealLog struct {

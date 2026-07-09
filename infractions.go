@@ -184,6 +184,17 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 	return &entry, nil
 }
 
+// InfractMember will add a member infraction.
+func (i *infractions) InfractMember(ctx context.Context, guildId, memberId, moderatorId string, action InfractionAction, duration *time.Duration, reason *string, appealable *bool) (*InfractionEntry, error) {
+	return i.InfractMemberWithCallback(ctx,
+		guildId, memberId, moderatorId,
+		action, duration, reason, appealable,
+		func(e InfractionEntry) error {
+			return nil
+		},
+	)
+}
+
 // GetInfractionCaseDetails will get the details of an infraction case based on a provided id.
 func (i *infractions) GetInfractionCaseDetails(ctx context.Context, guildId string, caseId int32) (*InfractionEntry, error) {
 	infraction, err := i.db.queries.GetInfractionByCaseId(ctx, i.db.dbtx, gen.GetInfractionByCaseIdParams{

@@ -350,6 +350,17 @@ type BanAppealLog struct {
 	Status     AppealStatus
 }
 
+type DiscordOauthSession struct {
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	SessionHash  []byte
+	ClientID     string
+	AccessToken  []byte
+	RefreshToken []byte
+}
+
 type GuildsRegistry struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz

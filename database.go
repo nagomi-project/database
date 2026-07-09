@@ -21,6 +21,7 @@ type Database struct {
 
 	GuildSettings *guildSettings
 	Infractions   *infractions
+	OAuth         *oAuth
 }
 
 // NewDatabase will return a new Database object that can be used for database operations.
@@ -38,6 +39,7 @@ func NewDatabase(pool *pgxpool.Pool) *Database {
 func (db *Database) init() *Database {
 	db.GuildSettings = newGuildSettings(db)
 	db.Infractions = newInfractions(db)
+	db.OAuth = newOAuth(db)
 
 	return db
 }

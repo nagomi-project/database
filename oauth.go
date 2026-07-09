@@ -20,6 +20,7 @@ type Session struct {
 	UserID       string
 	AccessToken  string
 	RefreshToken string
+	Expiration   time.Time
 }
 
 // CreateSession will create a new session.
@@ -40,6 +41,7 @@ func (o *oAuth) CreateSession(ctx context.Context, session string, clientId stri
 		UserID:       s.ClientID,
 		AccessToken:  s.AccessToken,
 		RefreshToken: s.RefreshToken,
+		Expiration:   s.ExpiresAt.Time,
 	}
 
 	return details, nil
@@ -59,6 +61,7 @@ func (o *oAuth) ValidateSession(ctx context.Context, session string) (*Session, 
 		UserID:       s.ClientID,
 		AccessToken:  s.AccessToken,
 		RefreshToken: s.RefreshToken,
+		Expiration:   s.ExpiresAt.Time,
 	}
 
 	return details, nil

@@ -67,6 +67,28 @@ func (o *oAuth) ValidateSession(ctx context.Context, session string) (*Session, 
 	return details, nil
 }
 
+func (o *oAuth) UpdateSession(ctx context.Context, session string, expiresAt time.Time, accessToken, refreshToken string) (*Session, error) {
+	s, err := o.db.queries.UpdateSession(ctx, o.db.dbtx, gen.UpdateSessionParams{
+		EncryptionKey: config.C.OAuthTokenEncryptionKey,
+		Session:       session,
+		AccessToken:   accessToken,
+		RefreshToken:  refreshToken,
+		Expiry:        NullableTimeToTimestamptz(&expiresAt),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	details := &Session{
+		UserID:       s.ClientID,
+		AccessToken:  s.AccessToken,
+		RefreshToken: s.RefreshToken,
+		Expiration:   s.ExpiresAt.Time,
+	}
+
+	return details, nil
+}
+
 // DeleteExpiredSessions will delete all expired sessions.
 func (o *oAuth) DeleteExpiredSessions(ctx context.Context) error {
 	return o.db.queries.DeleteExpiredSessions(ctx, o.db.dbtx)

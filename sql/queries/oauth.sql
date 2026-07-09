@@ -39,6 +39,26 @@ WHERE
     AND revoked_at IS NULL
 LIMIT 1;
 
+-- name: UpdateSession :one
+-- Updates the information for a specific session
+UPDATE discord_oauth_sessions
+SET 
+    updated_at = now(),
+    expires_at = @expiry,
+    access_token = pgp_sym_encrypt(@access_token, @encryption_key),
+    refresh_token = pgp_sym_encrypt(@refresh_token, @encryption_key)
+WHERE
+    session_hash = digest(@session, 'sha256')
+    AND revoked_at IS NULL
+RETURNING
+    created_at,
+    updated_at,
+    expires_at,
+    revoked_at,
+    client_id,
+    pgp_sym_decrypt(access_token, @encryption_key)::TEXT AS access_token,
+    pgp_sym_decrypt(refresh_token, @encryption_key)::TEXT AS refresh_token;
+
 -- name: RevokeSession :exec
 -- Revokes an existing session.
 UPDATE discord_oauth_sessions

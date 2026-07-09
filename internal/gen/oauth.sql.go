@@ -104,6 +104,66 @@ func (q *Queries) RevokeSession(ctx context.Context, db DBTX, session string) er
 	return err
 }
 
+const updateSession = `-- name: UpdateSession :one
+UPDATE discord_oauth_sessions
+SET 
+    updated_at = now(),
+    expires_at = $1,
+    access_token = pgp_sym_encrypt($2, $3),
+    refresh_token = pgp_sym_encrypt($4, $3)
+WHERE
+    session_hash = digest($5, 'sha256')
+    AND revoked_at IS NULL
+RETURNING
+    created_at,
+    updated_at,
+    expires_at,
+    revoked_at,
+    client_id,
+    pgp_sym_decrypt(access_token, $3)::TEXT AS access_token,
+    pgp_sym_decrypt(refresh_token, $3)::TEXT AS refresh_token
+`
+
+type UpdateSessionParams struct {
+	Expiry        pgtype.Timestamptz
+	AccessToken   string
+	EncryptionKey string
+	RefreshToken  string
+	Session       string
+}
+
+type UpdateSessionRow struct {
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	ExpiresAt    pgtype.Timestamptz
+	RevokedAt    pgtype.Timestamptz
+	ClientID     string
+	AccessToken  string
+	RefreshToken string
+}
+
+// Updates the information for a specific session
+func (q *Queries) UpdateSession(ctx context.Context, db DBTX, arg UpdateSessionParams) (UpdateSessionRow, error) {
+	row := db.QueryRow(ctx, updateSession,
+		arg.Expiry,
+		arg.AccessToken,
+		arg.EncryptionKey,
+		arg.RefreshToken,
+		arg.Session,
+	)
+	var i UpdateSessionRow
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.ClientID,
+		&i.AccessToken,
+		&i.RefreshToken,
+	)
+	return i, err
+}
+
 const validateSession = `-- name: ValidateSession :one
 SELECT
     created_at,

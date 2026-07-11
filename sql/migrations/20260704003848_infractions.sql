@@ -153,7 +153,7 @@ BEGIN
     -- When a new infraction expiry schedule entry is inserted.
     IF TG_OP = 'INSERT' THEN
         payload := json_build_object(
-            'inserted', TRUE,
+            'type', TG_OP,
             'expires_at', NEW.expires_at,
             'guild_id', NEW.guild_id,
             'case_number', NEW.case_number,
@@ -169,7 +169,7 @@ BEGIN
     -- Will only really happen if the expires_at field is updated.
     IF TG_OP = 'UPDATE' THEN
         payload := json_build_object(
-            'updated', TRUE,
+            'type', TG_OP,
             'expires_at', NEW.expires_at,
             'guild_id', NEW.guild_id,
             'case_number', NEW.case_number,
@@ -184,7 +184,7 @@ BEGIN
     -- When an existing infraction expiry schedule entry is removed.
     IF TG_OP = 'DELETE' THEN
         payload := json_build_object(
-            'removed', TRUE,
+            'type', TG_OP,
             'expires_at', OLD.expires_at,
             'guild_id', OLD.guild_id,
             'case_number', OLD.case_number,

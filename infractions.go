@@ -3,27 +3,20 @@ package database
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/nagomi-project/database/internal/gen"
 )
 
 type infractions struct {
 	db *Database
-
-	Notifications *infractionsNotifier
 }
 
 func newInfractions(db *Database) *infractions {
-	return &infractions{
-		db:            db,
-		Notifications: newInfractionsNotifier(db),
-	}
+	return &infractions{db}
 }
 
 type InfractionEntry struct {
@@ -474,64 +467,4 @@ func (i *infractions) UpdateBanAppealStatus(ctx context.Context, guildId, member
 	}
 
 	return nil
-}
-
-type infractionsNotifier struct {
-	db *Database
-}
-
-// In the future, this should maybe be a general notifier structure that will reuse a connection.
-// It doesn't seem like a wise idea to open multiple new connections for notification events.
-//
-// For the time being, I'm too lazy to do that (since I already had this code) and I'm not sure
-// if there will be other usecases for a listener. I'll cross that road if and when it comes to it.
-func newInfractionsNotifier(db *Database) *infractionsNotifier {
-	return &infractionsNotifier{db}
-}
-
-type InfractionsNotificationEvent struct {
-	Inserted   *bool            `json:"inserted,omitempty"`
-	Updated    *bool            `json:"updated,omitempty"`
-	Removed    *bool            `json:"removed,omitempty"`
-	CaseNumber int32            `json:"case_number"`
-	ExpiresAt  *time.Time       `json:"expires_at"`
-	GuildID    string           `json:"guild_id"`
-	MemberID   string           `json:"member_id"`
-	Action     InfractionAction `json:"action"`
-}
-
-// Listen will create a new connection that listens for notifications for infraction expirations.
-func (n *infractionsNotifier) Listen(ctx context.Context, data chan<- InfractionsNotificationEvent) error {
-	conn, err := pgx.Connect(ctx, n.db.pool.Config().ConnString())
-	if err != nil {
-		return err
-	}
-	defer conn.Close(context.Background())
-
-	if _, err := conn.Exec(ctx, "LISTEN infraction_expiry_schedule_events"); err != nil {
-		return err
-	}
-	defer conn.Exec(context.Background(), "UNLISTEN infraction_expiry_schedule_events") //nolint:errcheck
-
-	for {
-		notif, err := conn.WaitForNotification(ctx)
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil
-			}
-
-			return err
-		}
-
-		var event InfractionsNotificationEvent
-		if err := json.Unmarshal([]byte(notif.Payload), &event); err != nil {
-			return err
-		}
-
-		select {
-		case data <- event:
-		case <-ctx.Done():
-			return nil
-		}
-	}
 }

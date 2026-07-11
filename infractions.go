@@ -46,9 +46,12 @@ func newInfractionEntryFromDetails(d gen.InfractionDetail) *InfractionEntry {
 		CaseID:      d.CaseNumber,
 		MemberID:    d.MemberID,
 		ModeratorID: d.ModeratorID,
-		Action:      d.Action,
-		Appealable:  d.Appealable,
-		Hidden:      d.Hidden,
+
+		Action: d.Action,
+
+		Active:     d.Active,
+		Appealable: d.Appealable,
+		Hidden:     d.Hidden,
 	}
 
 	if d.ExpiresAt.Valid {
@@ -103,6 +106,8 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 			return err
 		}
 
+		entry.IssuedAt = infraction.CreatedAt.Time
+		entry.ModifiedAt = infraction.UpdatedAt.Time
 		entry.CaseID = infraction.CaseNumber
 		entry.Hidden = infraction.Hidden
 
@@ -117,6 +122,8 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 			}); err != nil {
 				return err
 			}
+
+			entry.Active = true
 		case InfractionActionBan:
 			canAppealBan := NullableBoolToBool(appealable)
 
@@ -129,6 +136,8 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 			}); err != nil {
 				return err
 			}
+
+			entry.Active = true
 
 			if err := txDb.queries.InsertActiveBan(ctx, txDb.dbtx, gen.InsertActiveBanParams{
 				GuildID:    guildId,

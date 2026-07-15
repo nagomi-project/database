@@ -2,6 +2,14 @@ package database
 
 import "github.com/nagomi-project/database/internal/gen"
 
+type PaginatedQuery[T any] struct {
+	CurrentPage  int
+	TotalPages   int
+	TotalEntries int
+
+	Data []T
+}
+
 type ActionLogSource = gen.ActionLogSource
 
 const (

@@ -210,8 +210,19 @@ func (i *infractions) GetInfractionCaseDetails(ctx context.Context, guildId stri
 	return newInfractionEntryFromDetails(infraction), nil
 }
 
-// GetMemberInfractionCasePage will get a page of member infractions. Each page returns 10 infractions maximum.
-func (i *infractions) GetMemberInfractionCasePage(ctx context.Context, guildId, memberId string, page int) ([]InfractionEntry, error) {
+// GetMemberInfractionCasePage will get a page of member infractions and its pagination details.
+// Each page returns five infractions maximum.
+func (i *infractions) GetMemberInfractionCasePage(ctx context.Context, guildId, memberId string, page int) (*PaginatedQuery[InfractionEntry], error) {
+	page = max(page, 1)
+
+	pageDetails, err := i.db.queries.GetMemberInfractionsPageDetails(ctx, i.db.dbtx, gen.GetMemberInfractionsPageDetailsParams{
+		GuildID:  guildId,
+		MemberID: memberId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	infractionsPage, err := i.db.queries.GetMemberInfractionsPage(ctx, i.db.dbtx, gen.GetMemberInfractionsPageParams{
 		GuildID:  guildId,
 		MemberID: memberId,
@@ -226,7 +237,12 @@ func (i *infractions) GetMemberInfractionCasePage(ctx context.Context, guildId, 
 		infractions[i] = *newInfractionEntryFromDetails(inf)
 	}
 
-	return infractions, nil
+	return &PaginatedQuery[InfractionEntry]{
+		CurrentPage:  page,
+		TotalPages:   int(pageDetails.TotalPages),
+		TotalEntries: int(pageDetails.TotalEntries),
+		Data:         infractions,
+	}, nil
 }
 
 // UpdateInfractionCaseReason will update the reason for an existing case.

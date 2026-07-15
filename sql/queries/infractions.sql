@@ -40,8 +40,21 @@ SELECT * FROM infraction_details
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
-OFFSET (GREATEST(@page::SMALLINT, 1) - 1) * 10
-LIMIT 10;
+    AND hidden = COALESCE(sqlc.narg('hidden'), FALSE)
+ORDER BY case_number DESC
+OFFSET (GREATEST(@page::SMALLINT, 1) - 1) * 5
+LIMIT 5;
+
+-- name: GetMemberInfractionsPageDetails :one
+-- Fetches pagination details for a member's infractions.
+SELECT
+    COUNT(*)::INTEGER AS total_entries,
+    CEIL(COUNT(*)::NUMERIC / 5)::INTEGER AS total_pages
+FROM infraction_details
+WHERE
+    guild_id = @guild_id
+    AND member_id = @member_id
+    AND hidden = COALESCE(sqlc.narg('hidden'), FALSE);
 
 -- name: GetMemberInfractions :many
 -- Fetches all of the infractions for a member

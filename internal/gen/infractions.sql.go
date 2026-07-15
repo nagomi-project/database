@@ -302,19 +302,27 @@ SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, mod
 WHERE
     guild_id = $1
     AND member_id = $2
-OFFSET (GREATEST($3::SMALLINT, 1) - 1) * 10
-LIMIT 10
+    AND hidden = COALESCE($3, FALSE)
+ORDER BY case_number DESC
+OFFSET (GREATEST($4::SMALLINT, 1) - 1) * 5
+LIMIT 5
 `
 
 type GetMemberInfractionsPageParams struct {
 	GuildID  string
 	MemberID string
+	Hidden   pgtype.Bool
 	Page     int16
 }
 
 // Fetches a list of infractions. This uses a pre-defined offset for "pagination".
 func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg GetMemberInfractionsPageParams) ([]InfractionDetail, error) {
-	rows, err := db.Query(ctx, getMemberInfractionsPage, arg.GuildID, arg.MemberID, arg.Page)
+	rows, err := db.Query(ctx, getMemberInfractionsPage,
+		arg.GuildID,
+		arg.MemberID,
+		arg.Hidden,
+		arg.Page,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -345,6 +353,36 @@ func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg Get
 		return nil, err
 	}
 	return items, nil
+}
+
+const getMemberInfractionsPageDetails = `-- name: GetMemberInfractionsPageDetails :one
+SELECT
+    COUNT(*)::INTEGER AS total_entries,
+    CEIL(COUNT(*)::NUMERIC / 5)::INTEGER AS total_pages
+FROM infraction_details
+WHERE
+    guild_id = $1
+    AND member_id = $2
+    AND hidden = COALESCE($3, FALSE)
+`
+
+type GetMemberInfractionsPageDetailsParams struct {
+	GuildID  string
+	MemberID string
+	Hidden   pgtype.Bool
+}
+
+type GetMemberInfractionsPageDetailsRow struct {
+	TotalEntries int32
+	TotalPages   int32
+}
+
+// Fetches pagination details for a member's infractions.
+func (q *Queries) GetMemberInfractionsPageDetails(ctx context.Context, db DBTX, arg GetMemberInfractionsPageDetailsParams) (GetMemberInfractionsPageDetailsRow, error) {
+	row := db.QueryRow(ctx, getMemberInfractionsPageDetails, arg.GuildID, arg.MemberID, arg.Hidden)
+	var i GetMemberInfractionsPageDetailsRow
+	err := row.Scan(&i.TotalEntries, &i.TotalPages)
+	return i, err
 }
 
 const infractMember = `-- name: InfractMember :one

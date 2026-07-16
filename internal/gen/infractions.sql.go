@@ -156,7 +156,9 @@ func (q *Queries) GetBanAppealLogsByCaseId(ctx context.Context, db DBTX, arg Get
 
 const getExpiringInfractionCases = `-- name: GetExpiringInfractionCases :many
 SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
-WHERE expires_at <= $1
+WHERE
+    active = TRUE
+    AND expires_at <= $1
 `
 
 // Fetch a list of infractions that will be expiring within a specified cutoff time.

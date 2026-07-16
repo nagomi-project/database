@@ -25,6 +25,7 @@ type InfractionEntry struct {
 	ExpiresAt  *time.Time
 
 	CaseID      int32
+	GuildID     string
 	MemberID    string
 	ModeratorID string
 
@@ -44,6 +45,7 @@ func newInfractionEntryFromDetails(d gen.InfractionDetail) *InfractionEntry {
 		ModifiedAt: d.UpdatedAt.Time,
 
 		CaseID:      d.CaseNumber,
+		GuildID:     d.GuildID,
 		MemberID:    d.MemberID,
 		ModeratorID: d.ModeratorID,
 
@@ -67,6 +69,20 @@ func newInfractionEntryFromDetails(d gen.InfractionDetail) *InfractionEntry {
 	}
 
 	return &e
+}
+
+func (i *infractions) GetExpiringInfractions(ctx context.Context, cutoff time.Time) ([]InfractionEntry, error) {
+	expiring, err := i.db.queries.GetExpiringInfractionCases(ctx, i.db.dbtx, NullableTimeToTimestamptz(&cutoff))
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]InfractionEntry, len(expiring))
+	for i, inf := range expiring {
+		entries[i] = *newInfractionEntryFromDetails(inf)
+	}
+
+	return entries, nil
 }
 
 // InfractMemberWithCallback will add a member infraction and require passing in a callback before the database will commit.

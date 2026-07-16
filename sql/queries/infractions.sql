@@ -14,7 +14,9 @@ WHERE
 -- name: GetExpiringInfractionCases :many
 -- Fetch a list of infractions that will be expiring within a specified cutoff time.
 SELECT * FROM infraction_details
-WHERE expires_at <= @cutoff;
+WHERE
+    active = TRUE
+    AND expires_at <= @cutoff;
 
 -- name: InsertInfractionProofMessage :one
 -- Inserts a message url for an infraction's proof.

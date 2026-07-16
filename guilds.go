@@ -2,11 +2,11 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nagomi-project/database/internal/gen"
 )
 
@@ -123,7 +123,7 @@ func (g *guildSettings) GetOrCreateGuildSettings(ctx context.Context, guildId st
 		}
 
 		logChannels, err := txDb.queries.GetGuildLogChannels(ctx, txDb.dbtx, guildId)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
 

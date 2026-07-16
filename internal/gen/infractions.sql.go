@@ -546,12 +546,23 @@ func (q *Queries) LogBanAppealStatus(ctx context.Context, db DBTX, arg LogBanApp
 	return i, err
 }
 
-const modifyScheduledInfraction = `-- name: ModifyScheduledInfraction :exec
+const modifyScheduledInfraction = `-- name: ModifyScheduledInfraction :one
+WITH updated_infraction AS (
+    UPDATE infraction_log SET
+        updated_at = now(),
+        expires_at = $1
+    WHERE
+        infraction_log.guild_id = $2
+        AND infraction_log.case_number = $3
+    RETURNING guild_id, case_number
+)
 UPDATE infraction_expiry_schedule SET
     expires_at = $1
+FROM updated_infraction
 WHERE
-    guild_id = $2
-    AND case_number = $3
+    infraction_expiry_schedule.guild_id = updated_infraction.guild_id
+    AND infraction_expiry_schedule.case_number = updated_infraction.case_number
+RETURNING infraction_expiry_schedule.expires_at, infraction_expiry_schedule.guild_id, infraction_expiry_schedule.case_number, infraction_expiry_schedule.member_id, infraction_expiry_schedule.action
 `
 
 type ModifyScheduledInfractionParams struct {
@@ -561,9 +572,17 @@ type ModifyScheduledInfractionParams struct {
 }
 
 // Modifies the duration for a scheduled infraction.
-func (q *Queries) ModifyScheduledInfraction(ctx context.Context, db DBTX, arg ModifyScheduledInfractionParams) error {
-	_, err := db.Exec(ctx, modifyScheduledInfraction, arg.ModifiedDuration, arg.GuildID, arg.CaseID)
-	return err
+func (q *Queries) ModifyScheduledInfraction(ctx context.Context, db DBTX, arg ModifyScheduledInfractionParams) (InfractionExpirySchedule, error) {
+	row := db.QueryRow(ctx, modifyScheduledInfraction, arg.ModifiedDuration, arg.GuildID, arg.CaseID)
+	var i InfractionExpirySchedule
+	err := row.Scan(
+		&i.ExpiresAt,
+		&i.GuildID,
+		&i.CaseNumber,
+		&i.MemberID,
+		&i.Action,
+	)
+	return i, err
 }
 
 const registerInfractionSettingsIfMissing = `-- name: RegisterInfractionSettingsIfMissing :exec
@@ -637,11 +656,12 @@ func (q *Queries) ScheduleInfraction(ctx context.Context, db DBTX, arg ScheduleI
 	return i, err
 }
 
-const unscheduleInfractionByCaseId = `-- name: UnscheduleInfractionByCaseId :exec
+const unscheduleInfractionByCaseId = `-- name: UnscheduleInfractionByCaseId :one
 DELETE FROM infraction_expiry_schedule
 WHERE
     guild_id = $1
     AND case_number = $2
+RETURNING expires_at, guild_id, case_number, member_id, action
 `
 
 type UnscheduleInfractionByCaseIdParams struct {
@@ -650,17 +670,26 @@ type UnscheduleInfractionByCaseIdParams struct {
 }
 
 // Removes a scheduled infraction.
-func (q *Queries) UnscheduleInfractionByCaseId(ctx context.Context, db DBTX, arg UnscheduleInfractionByCaseIdParams) error {
-	_, err := db.Exec(ctx, unscheduleInfractionByCaseId, arg.GuildID, arg.CaseID)
-	return err
+func (q *Queries) UnscheduleInfractionByCaseId(ctx context.Context, db DBTX, arg UnscheduleInfractionByCaseIdParams) (InfractionExpirySchedule, error) {
+	row := db.QueryRow(ctx, unscheduleInfractionByCaseId, arg.GuildID, arg.CaseID)
+	var i InfractionExpirySchedule
+	err := row.Scan(
+		&i.ExpiresAt,
+		&i.GuildID,
+		&i.CaseNumber,
+		&i.MemberID,
+		&i.Action,
+	)
+	return i, err
 }
 
-const unscheduleInfractionByType = `-- name: UnscheduleInfractionByType :exec
+const unscheduleInfractionByType = `-- name: UnscheduleInfractionByType :one
 DELETE FROM infraction_expiry_schedule
 WHERE
     guild_id = $1
     AND member_id = $2
     AND action = $3
+RETURNING expires_at, guild_id, case_number, member_id, action
 `
 
 type UnscheduleInfractionByTypeParams struct {
@@ -670,9 +699,17 @@ type UnscheduleInfractionByTypeParams struct {
 }
 
 // Unschedules an infraction based on its type.
-func (q *Queries) UnscheduleInfractionByType(ctx context.Context, db DBTX, arg UnscheduleInfractionByTypeParams) error {
-	_, err := db.Exec(ctx, unscheduleInfractionByType, arg.GuildID, arg.MemberID, arg.Action)
-	return err
+func (q *Queries) UnscheduleInfractionByType(ctx context.Context, db DBTX, arg UnscheduleInfractionByTypeParams) (InfractionExpirySchedule, error) {
+	row := db.QueryRow(ctx, unscheduleInfractionByType, arg.GuildID, arg.MemberID, arg.Action)
+	var i InfractionExpirySchedule
+	err := row.Scan(
+		&i.ExpiresAt,
+		&i.GuildID,
+		&i.CaseNumber,
+		&i.MemberID,
+		&i.Action,
+	)
+	return i, err
 }
 
 const updateActiveBan = `-- name: UpdateActiveBan :one

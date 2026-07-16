@@ -140,13 +140,24 @@ VALUES (@expiry, @guild_id, @case_id, @member_id, @action)
 ON CONFLICT DO NOTHING
 RETURNING *;
 
--- name: ModifyScheduledInfraction :exec
+-- name: ModifyScheduledInfraction :one
 -- Modifies the duration for a scheduled infraction.
+WITH updated_infraction AS (
+    UPDATE infraction_log SET
+        updated_at = now(),
+        expires_at = @modified_duration
+    WHERE
+        infraction_log.guild_id = @guild_id
+        AND infraction_log.case_number = @case_id
+    RETURNING guild_id, case_number
+)
 UPDATE infraction_expiry_schedule SET
     expires_at = @modified_duration
+FROM updated_infraction
 WHERE
-    guild_id = @guild_id
-    AND case_number = @case_id;
+    infraction_expiry_schedule.guild_id = updated_infraction.guild_id
+    AND infraction_expiry_schedule.case_number = updated_infraction.case_number
+RETURNING infraction_expiry_schedule.*;
 
 -- name: InsertActiveBan :exec
 -- Inserts a ban.
@@ -211,17 +222,19 @@ VALUES (
 )
 RETURNING *;
 
--- name: UnscheduleInfractionByCaseId :exec
+-- name: UnscheduleInfractionByCaseId :one
 -- Removes a scheduled infraction.
 DELETE FROM infraction_expiry_schedule
 WHERE
     guild_id = @guild_id
-    AND case_number = @case_id;
+    AND case_number = @case_id
+RETURNING *;
 
--- name: UnscheduleInfractionByType :exec
+-- name: UnscheduleInfractionByType :one
 -- Unschedules an infraction based on its type.
 DELETE FROM infraction_expiry_schedule
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
-    AND action = @action;
+    AND action = @action
+RETURNING *;

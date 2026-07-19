@@ -44,14 +44,14 @@ WHERE
     AND member_id = @member_id
     AND hidden = COALESCE(sqlc.narg('hidden'), FALSE)
 ORDER BY case_number DESC
-OFFSET (GREATEST(@page::SMALLINT, 1) - 1) * 5
-LIMIT 5;
+OFFSET (GREATEST(@page::SMALLINT, 1) - 1) * COALESCE(sqlc.narg('page_size'), 5)
+LIMIT COALESCE(sqlc.narg('page_size'), 5);
 
 -- name: GetMemberInfractionsPageDetails :one
 -- Fetches pagination details for a member's infractions.
 SELECT
     COUNT(*)::INTEGER AS total_entries,
-    CEIL(COUNT(*)::NUMERIC / 5)::INTEGER AS total_pages
+    CEIL(COUNT(*)::NUMERIC / COALESCE(sqlc.narg('page_size'), 5))::INTEGER AS total_pages
 FROM infraction_details
 WHERE
     guild_id = @guild_id

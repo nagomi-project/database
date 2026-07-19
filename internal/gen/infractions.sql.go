@@ -306,8 +306,8 @@ WHERE
     AND member_id = $2
     AND hidden = COALESCE($3, FALSE)
 ORDER BY case_number DESC
-OFFSET (GREATEST($4::SMALLINT, 1) - 1) * 5
-LIMIT 5
+OFFSET (GREATEST($4::SMALLINT, 1) - 1) * COALESCE($5, 5)
+LIMIT COALESCE($5, 5)
 `
 
 type GetMemberInfractionsPageParams struct {
@@ -315,6 +315,7 @@ type GetMemberInfractionsPageParams struct {
 	MemberID string
 	Hidden   pgtype.Bool
 	Page     int16
+	PageSize interface{}
 }
 
 // Fetches a list of infractions. This uses a pre-defined offset for "pagination".
@@ -324,6 +325,7 @@ func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg Get
 		arg.MemberID,
 		arg.Hidden,
 		arg.Page,
+		arg.PageSize,
 	)
 	if err != nil {
 		return nil, err
@@ -360,15 +362,16 @@ func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg Get
 const getMemberInfractionsPageDetails = `-- name: GetMemberInfractionsPageDetails :one
 SELECT
     COUNT(*)::INTEGER AS total_entries,
-    CEIL(COUNT(*)::NUMERIC / 5)::INTEGER AS total_pages
+    CEIL(COUNT(*)::NUMERIC / COALESCE($1, 5))::INTEGER AS total_pages
 FROM infraction_details
 WHERE
-    guild_id = $1
-    AND member_id = $2
-    AND hidden = COALESCE($3, FALSE)
+    guild_id = $2
+    AND member_id = $3
+    AND hidden = COALESCE($4, FALSE)
 `
 
 type GetMemberInfractionsPageDetailsParams struct {
+	PageSize interface{}
 	GuildID  string
 	MemberID string
 	Hidden   pgtype.Bool
@@ -381,7 +384,12 @@ type GetMemberInfractionsPageDetailsRow struct {
 
 // Fetches pagination details for a member's infractions.
 func (q *Queries) GetMemberInfractionsPageDetails(ctx context.Context, db DBTX, arg GetMemberInfractionsPageDetailsParams) (GetMemberInfractionsPageDetailsRow, error) {
-	row := db.QueryRow(ctx, getMemberInfractionsPageDetails, arg.GuildID, arg.MemberID, arg.Hidden)
+	row := db.QueryRow(ctx, getMemberInfractionsPageDetails,
+		arg.PageSize,
+		arg.GuildID,
+		arg.MemberID,
+		arg.Hidden,
+	)
 	var i GetMemberInfractionsPageDetailsRow
 	err := row.Scan(&i.TotalEntries, &i.TotalPages)
 	return i, err

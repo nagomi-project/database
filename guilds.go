@@ -156,3 +156,52 @@ func (g *guildSettings) GetOrCreateGuildSettings(ctx context.Context, guildId st
 
 	return settings, nil
 }
+
+type ActionLog struct {
+	CreatedAt time.Time
+	ID        int64
+	ActorID   string
+	Type      ActionLogType
+	Source    ActionLogSource
+	Action    string
+}
+
+// GetActionLogHistory gets a page of actions performed in a guild.
+// Each page returns five actions maximum.
+func (g *guildSettings) GetActionLogHistory(ctx context.Context, guildId string, page int) (*PaginatedQuery[ActionLog], error) {
+	page = max(page, 1)
+
+	pageDetails, err := g.db.queries.GetActionLogPageDetails(ctx, g.db.dbtx, gen.GetActionLogPageDetailsParams{
+		GuildID: guildId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	logPage, err := g.db.queries.GetActionLogPage(ctx, g.db.dbtx, gen.GetActionLogPageParams{
+		GuildID: guildId,
+		Page:    int16(page),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	actions := make([]ActionLog, len(logPage))
+	for idx, entry := range logPage {
+		actions[idx] = ActionLog{
+			CreatedAt: entry.CreatedAt.Time,
+			ID:        entry.ID,
+			ActorID:   entry.ActorID,
+			Type:      entry.Type,
+			Source:    entry.Source,
+			Action:    entry.Action,
+		}
+	}
+
+	return &PaginatedQuery[ActionLog]{
+		CurrentPage:  page,
+		TotalPages:   int(pageDetails.TotalPages),
+		TotalEntries: int(pageDetails.TotalEntries),
+		Data:         actions,
+	}, nil
+}

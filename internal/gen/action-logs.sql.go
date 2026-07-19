@@ -9,6 +9,78 @@ import (
 	"context"
 )
 
+const getActionLogPage = `-- name: GetActionLogPage :many
+SELECT created_at, id, guild_id, actor_id, type, source, action FROM action_logs
+WHERE
+    guild_id = $1
+ORDER BY
+    created_at DESC
+OFFSET (GREATEST($2::SMALLINT, 1) - 1) * COALESCE($3, 5)
+LIMIT COALESCE($3, 5)
+`
+
+type GetActionLogPageParams struct {
+	GuildID  string
+	Page     int16
+	PageSize interface{}
+}
+
+// Gets the most recent actions done in the server.
+func (q *Queries) GetActionLogPage(ctx context.Context, db DBTX, arg GetActionLogPageParams) ([]ActionLog, error) {
+	rows, err := db.Query(ctx, getActionLogPage, arg.GuildID, arg.Page, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActionLog
+	for rows.Next() {
+		var i ActionLog
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.ID,
+			&i.GuildID,
+			&i.ActorID,
+			&i.Type,
+			&i.Source,
+			&i.Action,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getActionLogPageDetails = `-- name: GetActionLogPageDetails :one
+SELECT
+    COUNT(*)::INTEGER AS total_entries,
+    CEIL(COUNT(*)::NUMERIC / COALESCE($1, 5))::INTEGER AS total_pages
+FROM action_logs
+WHERE
+    guild_id = $2
+`
+
+type GetActionLogPageDetailsParams struct {
+	PageSize interface{}
+	GuildID  string
+}
+
+type GetActionLogPageDetailsRow struct {
+	TotalEntries int32
+	TotalPages   int32
+}
+
+// Fetches pagination details for an action log page.
+func (q *Queries) GetActionLogPageDetails(ctx context.Context, db DBTX, arg GetActionLogPageDetailsParams) (GetActionLogPageDetailsRow, error) {
+	row := db.QueryRow(ctx, getActionLogPageDetails, arg.PageSize, arg.GuildID)
+	var i GetActionLogPageDetailsRow
+	err := row.Scan(&i.TotalEntries, &i.TotalPages)
+	return i, err
+}
+
 const logAction = `-- name: LogAction :one
 WITH next_log AS (
     INSERT INTO next_log_ids (guild_id, next_id)

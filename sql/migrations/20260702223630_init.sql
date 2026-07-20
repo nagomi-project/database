@@ -47,33 +47,32 @@ CREATE TABLE IF NOT EXISTS action_logs (
 );
 
 CREATE TYPE event_log_type AS ENUM (
-    'user.join',
-    'user.leave',
-    'user.kick',
-    'user.ban',
-    'user.unban',
-    'user.roles_update',
-    'user.nickname_update',
-    'user.voice_join',
-    'user.voice_move',
-    'user.voice_leave',
+    'user_join',
+    'user_leave',
+    'user_kick',
+    'user_ban',
+    'user_unban',
+    'user_roles_update',
+    'user_nickname_update',
+    'user_voice_join',
+    'user_voice_move',
+    'user_voice_leave',
 
-    'message.create',
-    'message.edit',
-    'message.delete',
-    'message.image_remove',
+    'message_edit',
+    'message_delete',
+    'message_image_remove',
 
-    'channel.create',
-    'channel.update',
-    'channel.delete',
+    'channel_create',
+    'channel_update',
+    'channel_delete',
 
-    'role.create',
-    'role.update',
-    'role.delete',
+    'role_create',
+    'role_update',
+    'role_delete',
 
-    'emoji.create',
-    'emoji.update',
-    'emoji.delete'
+    'emoji_create',
+    'emoji_update',
+    'emoji_delete'
 );
 
 CREATE TABLE IF NOT EXISTS event_log_settings (

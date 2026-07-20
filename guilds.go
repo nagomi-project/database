@@ -31,7 +31,6 @@ type EventLogChannel struct {
 	UserVoiceMove      *string
 	UserVoiceLeave     *string
 
-	MessageCreate      *string
 	MessageEdit        *string
 	MessageDelete      *string
 	MessageImageRemove *string
@@ -53,45 +52,43 @@ func (g *guildSettings) formatLogChannels(channels []gen.EventLogChannel, option
 
 	for _, channel := range channels {
 		switch channel.Type {
-		case EventLogTypeUserjoin:
+		case EventLogTypeUserJoin:
 			logChannels.UserJoin = &channel.ChannelID
-		case EventLogTypeUserleave:
+		case EventLogTypeUserLeave:
 			logChannels.UserLeave = &channel.ChannelID
-		case EventLogTypeUserkick:
+		case EventLogTypeUserKick:
 			logChannels.UserKick = &channel.ChannelID
-		case EventLogTypeUserban:
+		case EventLogTypeUserBan:
 			logChannels.UserBan = &channel.ChannelID
-		case EventLogTypeUserunban:
+		case EventLogTypeUserUnban:
 			logChannels.UserUnban = &channel.ChannelID
-		case EventLogTypeUserrolesUpdate:
+		case EventLogTypeUserRolesUpdate:
 			logChannels.UserRolesUpdate = &channel.ChannelID
-		case EventLogTypeUsernicknameUpdate:
+		case EventLogTypeUserNicknameUpdate:
 			logChannels.UserNicknameUpdate = &channel.ChannelID
-		case EventLogTypeUservoiceJoin:
+		case EventLogTypeUserVoiceJoin:
 			logChannels.UserVoiceJoin = &channel.ChannelID
-		case EventLogTypeUservoiceMove:
+		case EventLogTypeUserVoiceMove:
 			logChannels.UserVoiceMove = &channel.ChannelID
-		case EventLogTypeUservoiceLeave:
+		case EventLogTypeUserVoiceLeave:
 			logChannels.UserVoiceLeave = &channel.ChannelID
-		case EventLogTypeMessagecreate:
-			logChannels.MessageCreate = &channel.ChannelID
-		case EventLogTypeMessageedit:
+		case EventLogTypeMessageEdit:
 			logChannels.MessageEdit = &channel.ChannelID
-		case EventLogTypeMessagedelete:
+		case EventLogTypeMessageDelete:
 			logChannels.MessageDelete = &channel.ChannelID
-		case EventLogTypeMessageimageRemove:
+		case EventLogTypeMessageImageRemove:
 			logChannels.MessageImageRemove = &channel.ChannelID
-		case EventLogTypeChannelcreate:
+		case EventLogTypeChannelCreate:
 			logChannels.ChannelCreate = &channel.ChannelID
-		case EventLogTypeChannelupdate:
+		case EventLogTypeChannelUpdate:
 			logChannels.ChannelUpdate = &channel.ChannelID
-		case EventLogTypeChanneldelete:
+		case EventLogTypeChannelDelete:
 			logChannels.ChannelDelete = &channel.ChannelID
-		case EventLogTypeEmojicreate:
+		case EventLogTypeEmojiCreate:
 			logChannels.EmojiCreate = &channel.ChannelID
-		case EventLogTypeEmojiupdate:
+		case EventLogTypeEmojiUpdate:
 			logChannels.EmojiUpdate = &channel.ChannelID
-		case EventLogTypeEmojidelete:
+		case EventLogTypeEmojiDelete:
 			logChannels.EmojiDelete = &channel.ChannelID
 		}
 	}

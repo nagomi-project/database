@@ -194,29 +194,28 @@ func AllAppealStatusValues() []AppealStatus {
 type EventLogType string
 
 const (
-	EventLogTypeUserjoin           EventLogType = "user.join"
-	EventLogTypeUserleave          EventLogType = "user.leave"
-	EventLogTypeUserkick           EventLogType = "user.kick"
-	EventLogTypeUserban            EventLogType = "user.ban"
-	EventLogTypeUserunban          EventLogType = "user.unban"
-	EventLogTypeUserrolesUpdate    EventLogType = "user.roles_update"
-	EventLogTypeUsernicknameUpdate EventLogType = "user.nickname_update"
-	EventLogTypeUservoiceJoin      EventLogType = "user.voice_join"
-	EventLogTypeUservoiceMove      EventLogType = "user.voice_move"
-	EventLogTypeUservoiceLeave     EventLogType = "user.voice_leave"
-	EventLogTypeMessagecreate      EventLogType = "message.create"
-	EventLogTypeMessageedit        EventLogType = "message.edit"
-	EventLogTypeMessagedelete      EventLogType = "message.delete"
-	EventLogTypeMessageimageRemove EventLogType = "message.image_remove"
-	EventLogTypeChannelcreate      EventLogType = "channel.create"
-	EventLogTypeChannelupdate      EventLogType = "channel.update"
-	EventLogTypeChanneldelete      EventLogType = "channel.delete"
-	EventLogTypeRolecreate         EventLogType = "role.create"
-	EventLogTypeRoleupdate         EventLogType = "role.update"
-	EventLogTypeRoledelete         EventLogType = "role.delete"
-	EventLogTypeEmojicreate        EventLogType = "emoji.create"
-	EventLogTypeEmojiupdate        EventLogType = "emoji.update"
-	EventLogTypeEmojidelete        EventLogType = "emoji.delete"
+	EventLogTypeUserJoin           EventLogType = "user_join"
+	EventLogTypeUserLeave          EventLogType = "user_leave"
+	EventLogTypeUserKick           EventLogType = "user_kick"
+	EventLogTypeUserBan            EventLogType = "user_ban"
+	EventLogTypeUserUnban          EventLogType = "user_unban"
+	EventLogTypeUserRolesUpdate    EventLogType = "user_roles_update"
+	EventLogTypeUserNicknameUpdate EventLogType = "user_nickname_update"
+	EventLogTypeUserVoiceJoin      EventLogType = "user_voice_join"
+	EventLogTypeUserVoiceMove      EventLogType = "user_voice_move"
+	EventLogTypeUserVoiceLeave     EventLogType = "user_voice_leave"
+	EventLogTypeMessageEdit        EventLogType = "message_edit"
+	EventLogTypeMessageDelete      EventLogType = "message_delete"
+	EventLogTypeMessageImageRemove EventLogType = "message_image_remove"
+	EventLogTypeChannelCreate      EventLogType = "channel_create"
+	EventLogTypeChannelUpdate      EventLogType = "channel_update"
+	EventLogTypeChannelDelete      EventLogType = "channel_delete"
+	EventLogTypeRoleCreate         EventLogType = "role_create"
+	EventLogTypeRoleUpdate         EventLogType = "role_update"
+	EventLogTypeRoleDelete         EventLogType = "role_delete"
+	EventLogTypeEmojiCreate        EventLogType = "emoji_create"
+	EventLogTypeEmojiUpdate        EventLogType = "emoji_update"
+	EventLogTypeEmojiDelete        EventLogType = "emoji_delete"
 )
 
 func (e *EventLogType) Scan(src interface{}) error {
@@ -256,29 +255,28 @@ func (ns NullEventLogType) Value() (driver.Value, error) {
 
 func (e EventLogType) Valid() bool {
 	switch e {
-	case EventLogTypeUserjoin,
-		EventLogTypeUserleave,
-		EventLogTypeUserkick,
-		EventLogTypeUserban,
-		EventLogTypeUserunban,
-		EventLogTypeUserrolesUpdate,
-		EventLogTypeUsernicknameUpdate,
-		EventLogTypeUservoiceJoin,
-		EventLogTypeUservoiceMove,
-		EventLogTypeUservoiceLeave,
-		EventLogTypeMessagecreate,
-		EventLogTypeMessageedit,
-		EventLogTypeMessagedelete,
-		EventLogTypeMessageimageRemove,
-		EventLogTypeChannelcreate,
-		EventLogTypeChannelupdate,
-		EventLogTypeChanneldelete,
-		EventLogTypeRolecreate,
-		EventLogTypeRoleupdate,
-		EventLogTypeRoledelete,
-		EventLogTypeEmojicreate,
-		EventLogTypeEmojiupdate,
-		EventLogTypeEmojidelete:
+	case EventLogTypeUserJoin,
+		EventLogTypeUserLeave,
+		EventLogTypeUserKick,
+		EventLogTypeUserBan,
+		EventLogTypeUserUnban,
+		EventLogTypeUserRolesUpdate,
+		EventLogTypeUserNicknameUpdate,
+		EventLogTypeUserVoiceJoin,
+		EventLogTypeUserVoiceMove,
+		EventLogTypeUserVoiceLeave,
+		EventLogTypeMessageEdit,
+		EventLogTypeMessageDelete,
+		EventLogTypeMessageImageRemove,
+		EventLogTypeChannelCreate,
+		EventLogTypeChannelUpdate,
+		EventLogTypeChannelDelete,
+		EventLogTypeRoleCreate,
+		EventLogTypeRoleUpdate,
+		EventLogTypeRoleDelete,
+		EventLogTypeEmojiCreate,
+		EventLogTypeEmojiUpdate,
+		EventLogTypeEmojiDelete:
 		return true
 	}
 	return false
@@ -286,29 +284,28 @@ func (e EventLogType) Valid() bool {
 
 func AllEventLogTypeValues() []EventLogType {
 	return []EventLogType{
-		EventLogTypeUserjoin,
-		EventLogTypeUserleave,
-		EventLogTypeUserkick,
-		EventLogTypeUserban,
-		EventLogTypeUserunban,
-		EventLogTypeUserrolesUpdate,
-		EventLogTypeUsernicknameUpdate,
-		EventLogTypeUservoiceJoin,
-		EventLogTypeUservoiceMove,
-		EventLogTypeUservoiceLeave,
-		EventLogTypeMessagecreate,
-		EventLogTypeMessageedit,
-		EventLogTypeMessagedelete,
-		EventLogTypeMessageimageRemove,
-		EventLogTypeChannelcreate,
-		EventLogTypeChannelupdate,
-		EventLogTypeChanneldelete,
-		EventLogTypeRolecreate,
-		EventLogTypeRoleupdate,
-		EventLogTypeRoledelete,
-		EventLogTypeEmojicreate,
-		EventLogTypeEmojiupdate,
-		EventLogTypeEmojidelete,
+		EventLogTypeUserJoin,
+		EventLogTypeUserLeave,
+		EventLogTypeUserKick,
+		EventLogTypeUserBan,
+		EventLogTypeUserUnban,
+		EventLogTypeUserRolesUpdate,
+		EventLogTypeUserNicknameUpdate,
+		EventLogTypeUserVoiceJoin,
+		EventLogTypeUserVoiceMove,
+		EventLogTypeUserVoiceLeave,
+		EventLogTypeMessageEdit,
+		EventLogTypeMessageDelete,
+		EventLogTypeMessageImageRemove,
+		EventLogTypeChannelCreate,
+		EventLogTypeChannelUpdate,
+		EventLogTypeChannelDelete,
+		EventLogTypeRoleCreate,
+		EventLogTypeRoleUpdate,
+		EventLogTypeRoleDelete,
+		EventLogTypeEmojiCreate,
+		EventLogTypeEmojiUpdate,
+		EventLogTypeEmojiDelete,
 	}
 }
 

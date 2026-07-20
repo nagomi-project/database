@@ -26,29 +26,28 @@ const (
 type LogChannelType = gen.EventLogType
 
 const (
-	EventLogTypeUserjoin           = gen.EventLogTypeUserjoin
-	EventLogTypeUserleave          = gen.EventLogTypeUserleave
-	EventLogTypeUserkick           = gen.EventLogTypeUserkick
-	EventLogTypeUserban            = gen.EventLogTypeUserban
-	EventLogTypeUserunban          = gen.EventLogTypeUserunban
-	EventLogTypeUserrolesUpdate    = gen.EventLogTypeUserrolesUpdate
-	EventLogTypeUsernicknameUpdate = gen.EventLogTypeUsernicknameUpdate
-	EventLogTypeUservoiceJoin      = gen.EventLogTypeUservoiceJoin
-	EventLogTypeUservoiceMove      = gen.EventLogTypeUservoiceMove
-	EventLogTypeUservoiceLeave     = gen.EventLogTypeUservoiceLeave
-	EventLogTypeMessagecreate      = gen.EventLogTypeMessagecreate
-	EventLogTypeMessageedit        = gen.EventLogTypeMessageedit
-	EventLogTypeMessagedelete      = gen.EventLogTypeMessagedelete
-	EventLogTypeMessageimageRemove = gen.EventLogTypeMessageimageRemove
-	EventLogTypeChannelcreate      = gen.EventLogTypeChannelcreate
-	EventLogTypeChannelupdate      = gen.EventLogTypeChannelupdate
-	EventLogTypeChanneldelete      = gen.EventLogTypeChanneldelete
-	EventLogTypeRolecreate         = gen.EventLogTypeRolecreate
-	EventLogTypeRoleupdate         = gen.EventLogTypeRoleupdate
-	EventLogTypeRoledelete         = gen.EventLogTypeRoledelete
-	EventLogTypeEmojicreate        = gen.EventLogTypeEmojicreate
-	EventLogTypeEmojiupdate        = gen.EventLogTypeEmojiupdate
-	EventLogTypeEmojidelete        = gen.EventLogTypeEmojidelete
+	EventLogTypeUserJoin           = gen.EventLogTypeUserJoin
+	EventLogTypeUserLeave          = gen.EventLogTypeUserLeave
+	EventLogTypeUserKick           = gen.EventLogTypeUserKick
+	EventLogTypeUserBan            = gen.EventLogTypeUserBan
+	EventLogTypeUserUnban          = gen.EventLogTypeUserUnban
+	EventLogTypeUserRolesUpdate    = gen.EventLogTypeUserRolesUpdate
+	EventLogTypeUserNicknameUpdate = gen.EventLogTypeUserNicknameUpdate
+	EventLogTypeUserVoiceJoin      = gen.EventLogTypeUserVoiceJoin
+	EventLogTypeUserVoiceMove      = gen.EventLogTypeUserVoiceMove
+	EventLogTypeUserVoiceLeave     = gen.EventLogTypeUserVoiceLeave
+	EventLogTypeMessageEdit        = gen.EventLogTypeMessageEdit
+	EventLogTypeMessageDelete      = gen.EventLogTypeMessageDelete
+	EventLogTypeMessageImageRemove = gen.EventLogTypeMessageImageRemove
+	EventLogTypeChannelCreate      = gen.EventLogTypeChannelCreate
+	EventLogTypeChannelUpdate      = gen.EventLogTypeChannelUpdate
+	EventLogTypeChannelDelete      = gen.EventLogTypeChannelDelete
+	EventLogTypeRoleCreate         = gen.EventLogTypeRoleCreate
+	EventLogTypeRoleUpdate         = gen.EventLogTypeRoleUpdate
+	EventLogTypeRoleDelete         = gen.EventLogTypeRoleDelete
+	EventLogTypeEmojiCreate        = gen.EventLogTypeEmojiCreate
+	EventLogTypeEmojiUpdate        = gen.EventLogTypeEmojiUpdate
+	EventLogTypeEmojiDelete        = gen.EventLogTypeEmojiDelete
 )
 
 type InfractionAction = gen.InfractionAction

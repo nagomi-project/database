@@ -103,32 +103,3 @@ func (q *Queries) UpdateGuildRegistryTime(ctx context.Context, db DBTX, guildID 
 	_, err := db.Exec(ctx, updateGuildRegistryTime, guildID)
 	return err
 }
-
-const upsertLogChannel = `-- name: UpsertLogChannel :one
-INSERT INTO event_log_channels (type, guild_id, channel_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (guild_id, type) DO UPDATE SET
-    updated_at = now(),
-    channel_id = $3
-RETURNING created_at, updated_at, type, guild_id, channel_id
-`
-
-type UpsertLogChannelParams struct {
-	Type      EventLogType
-	GuildID   string
-	ChannelID string
-}
-
-// Creates a new log channel or modifies the id of an existing one.
-func (q *Queries) UpsertLogChannel(ctx context.Context, db DBTX, arg UpsertLogChannelParams) (EventLogChannel, error) {
-	row := db.QueryRow(ctx, upsertLogChannel, arg.Type, arg.GuildID, arg.ChannelID)
-	var i EventLogChannel
-	err := row.Scan(
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Type,
-		&i.GuildID,
-		&i.ChannelID,
-	)
-	return i, err
-}

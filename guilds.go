@@ -152,6 +152,23 @@ func (g *guildSettings) CreateOrUpdateLogChannel(ctx context.Context, guildId, c
 	return channel, nil
 }
 
+func (g *guildSettings) CreateOrUpdateManyLogChannels(ctx context.Context, guildId string, channelIds map[string]LogChannelType, source ActionLogSource) ([]gen.EventLogChannel, error) {
+	var (
+		ids   []string
+		types []LogChannelType
+	)
+
+	for id, t := range channelIds {
+		ids = append(ids, id)
+		types = append(types, t)
+	}
+
+	return g.db.queries.UpsertManyLogChannels(ctx, g.db.dbtx, gen.UpsertManyLogChannelsParams{
+		ChannelIds: ids,
+		Types:      types,
+	})
+}
+
 func (g *guildSettings) RemoveLogChannel(ctx context.Context, guildId, userId string, channelType LogChannelType, source ActionLogSource) error {
 	return g.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
 		if err := g.db.queries.UpdateGuildRegistryTime(ctx, txDb.dbtx, guildId); err != nil {

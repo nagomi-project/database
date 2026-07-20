@@ -25,15 +25,6 @@ UPDATE SET
     updated_at = now()
 RETURNING *;
 
--- name: UpsertLogChannel :one
--- Creates a new log channel or modifies the id of an existing one.
-INSERT INTO event_log_channels (type, guild_id, channel_id)
-VALUES (@type, @guild_id, @channel_id)
-ON CONFLICT (guild_id, type) DO UPDATE SET
-    updated_at = now(),
-    channel_id = @channel_id
-RETURNING *;
-
 -- name: RemoveLogChannel :one
 -- Removes an existing log channel.
 DELETE FROM event_log_channels

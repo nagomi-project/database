@@ -61,3 +61,79 @@ func (q *Queries) GetEventLogSettings(ctx context.Context, db DBTX, guildID stri
 	)
 	return i, err
 }
+
+const upsertLogChannel = `-- name: UpsertLogChannel :one
+INSERT INTO event_log_channels (type, guild_id, channel_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (guild_id, type) DO UPDATE SET
+    updated_at = now(),
+    channel_id = $3
+RETURNING created_at, updated_at, type, guild_id, channel_id
+`
+
+type UpsertLogChannelParams struct {
+	Type      EventLogType
+	GuildID   string
+	ChannelID string
+}
+
+// Creates a new log channel or modifies the id of an existing one.
+func (q *Queries) UpsertLogChannel(ctx context.Context, db DBTX, arg UpsertLogChannelParams) (EventLogChannel, error) {
+	row := db.QueryRow(ctx, upsertLogChannel, arg.Type, arg.GuildID, arg.ChannelID)
+	var i EventLogChannel
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Type,
+		&i.GuildID,
+		&i.ChannelID,
+	)
+	return i, err
+}
+
+const upsertManyLogChannels = `-- name: UpsertManyLogChannels :many
+INSERT INTO event_log_channels (type, guild_id, channel_id)
+SELECT types.type, $1, channels.channel_id
+FROM unnest(CAST($2 AS event_log_type[]))
+    WITH ORDINALITY AS types(type, position)
+JOIN unnest(CAST($3 AS SNOWFLAKE[]))
+    WITH ORDINALITY AS channels(channel_id, position)
+    USING (position)
+ON CONFLICT (guild_id, type) DO UPDATE SET
+    updated_at = now(),
+    channel_id = EXCLUDED.channel_id
+RETURNING created_at, updated_at, type, guild_id, channel_id
+`
+
+type UpsertManyLogChannelsParams struct {
+	GuildID    string
+	Types      []EventLogType
+	ChannelIds []string
+}
+
+// Creates a new log channel or modifies the id of existing ones.
+func (q *Queries) UpsertManyLogChannels(ctx context.Context, db DBTX, arg UpsertManyLogChannelsParams) ([]EventLogChannel, error) {
+	rows, err := db.Query(ctx, upsertManyLogChannels, arg.GuildID, arg.Types, arg.ChannelIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventLogChannel
+	for rows.Next() {
+		var i EventLogChannel
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Type,
+			&i.GuildID,
+			&i.ChannelID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

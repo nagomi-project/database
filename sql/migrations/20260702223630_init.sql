@@ -46,28 +46,54 @@ CREATE TABLE IF NOT EXISTS action_logs (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
-CREATE TYPE log_channel_type AS ENUM (
-    -- All events that take place in the server.
-    --
-    -- If there is a channel set for certain events,
-    -- it will not be sent to the "all" channel.
-    'all',
-    -- Message related events that take place in the server.
-    -- deleted, edited
-    'message',
-    -- User / Member related events that take place in the server.
-    -- join, leave, ban, unban, kick,
-    'user',
-    -- Where infractions will be logged.
-    -- kick, ban, unban, softban, mute.
-    'infraction_log'
+CREATE TYPE event_log_type AS ENUM (
+    'user.join',
+    'user.leave',
+    'user.kick',
+    'user.ban',
+    'user.unban',
+    'user.roles_update',
+    'user.nickname_update',
+    'user.voice_join',
+    'user.voice_move',
+    'user.voice_leave',
+
+    'message.create',
+    'message.edit',
+    'message.delete',
+    'message.image_remove',
+
+    'channel.create',
+    'channel.update',
+    'channel.delete',
+
+    'role.create',
+    'role.update',
+    'role.delete',
+
+    'emoji.create',
+    'emoji.update',
+    'emoji.delete'
 );
 
-CREATE TABLE IF NOT EXISTS log_channels (
+CREATE TABLE IF NOT EXISTS event_log_settings (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    type log_channel_type NOT NULL,
+    guild_id SNOWFLAKE NOT NULL,
+
+    ignored_channels SNOWFLAKE[],
+    ignore_roles SNOWFLAKE[],
+
+    PRIMARY KEY (guild_id),
+    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_log_channels (
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    type event_log_type NOT NULL,
     guild_id SNOWFLAKE NOT NULL,
     channel_id SNOWFLAKE NOT NULL,
 
@@ -79,7 +105,7 @@ CREATE TABLE IF NOT EXISTS log_channels (
 
 DROP TABLE IF EXISTS action_logs;
 DROP TABLE IF EXISTS next_log_ids;
-DROP TABLE IF EXISTS log_channels;
+DROP TABLE IF EXISTS event_log_channels;
 DROP TABLE IF EXISTS guilds_registry;
 
 DROP TYPE IF EXISTS action_log_source;

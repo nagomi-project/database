@@ -10,6 +10,12 @@ SELECT * FROM guilds_registry
 WHERE
     guild_id = @guild_id;
 
+-- name: FindRegisteredGuilds :many
+-- Fetches the guilds that are registered from a provided list.
+SELECT * FROM guilds_registry
+WHERE
+    guild_id = ANY(@guild_ids::TEXT[]);
+
 -- name: UpdateGuildRegistryTime :exec
 -- Updates when a guild settings were modified.
 INSERT INTO guilds_registry (guild_id)
@@ -21,7 +27,7 @@ RETURNING *;
 
 -- name: UpsertLogChannel :one
 -- Creates a new log channel or modifies the id of an existing one.
-INSERT INTO log_channels (type, guild_id, channel_id)
+INSERT INTO event_log_channels (type, guild_id, channel_id)
 VALUES (@type, @guild_id, @channel_id)
 ON CONFLICT (guild_id, type) DO UPDATE SET
     updated_at = now(),
@@ -30,7 +36,7 @@ RETURNING *;
 
 -- name: RemoveLogChannel :one
 -- Removes an existing log channel.
-DELETE FROM log_channels
+DELETE FROM event_log_channels
 WHERE
     type = @type
     AND guild_id = @guild_id

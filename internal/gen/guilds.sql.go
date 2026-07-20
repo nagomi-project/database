@@ -9,6 +9,33 @@ import (
 	"context"
 )
 
+const findRegisteredGuilds = `-- name: FindRegisteredGuilds :many
+SELECT created_at, updated_at, guild_id FROM guilds_registry
+WHERE
+    guild_id = ANY($1::TEXT[])
+`
+
+// Fetches the guilds that are registered from a provided list.
+func (q *Queries) FindRegisteredGuilds(ctx context.Context, db DBTX, guildIds []string) ([]GuildsRegistry, error) {
+	rows, err := db.Query(ctx, findRegisteredGuilds, guildIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GuildsRegistry
+	for rows.Next() {
+		var i GuildsRegistry
+		if err := rows.Scan(&i.CreatedAt, &i.UpdatedAt, &i.GuildID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRegisteredGuild = `-- name: GetRegisteredGuild :one
 SELECT created_at, updated_at, guild_id FROM guilds_registry
 WHERE
@@ -36,7 +63,7 @@ func (q *Queries) RegisterGuildIfMissing(ctx context.Context, db DBTX, guildID s
 }
 
 const removeLogChannel = `-- name: RemoveLogChannel :one
-DELETE FROM log_channels
+DELETE FROM event_log_channels
 WHERE
     type = $1
     AND guild_id = $2
@@ -44,14 +71,14 @@ RETURNING created_at, updated_at, type, guild_id, channel_id
 `
 
 type RemoveLogChannelParams struct {
-	Type    LogChannelType
+	Type    EventLogType
 	GuildID string
 }
 
 // Removes an existing log channel.
-func (q *Queries) RemoveLogChannel(ctx context.Context, db DBTX, arg RemoveLogChannelParams) (LogChannel, error) {
+func (q *Queries) RemoveLogChannel(ctx context.Context, db DBTX, arg RemoveLogChannelParams) (EventLogChannel, error) {
 	row := db.QueryRow(ctx, removeLogChannel, arg.Type, arg.GuildID)
-	var i LogChannel
+	var i EventLogChannel
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -78,7 +105,7 @@ func (q *Queries) UpdateGuildRegistryTime(ctx context.Context, db DBTX, guildID 
 }
 
 const upsertLogChannel = `-- name: UpsertLogChannel :one
-INSERT INTO log_channels (type, guild_id, channel_id)
+INSERT INTO event_log_channels (type, guild_id, channel_id)
 VALUES ($1, $2, $3)
 ON CONFLICT (guild_id, type) DO UPDATE SET
     updated_at = now(),
@@ -87,15 +114,15 @@ RETURNING created_at, updated_at, type, guild_id, channel_id
 `
 
 type UpsertLogChannelParams struct {
-	Type      LogChannelType
+	Type      EventLogType
 	GuildID   string
 	ChannelID string
 }
 
 // Creates a new log channel or modifies the id of an existing one.
-func (q *Queries) UpsertLogChannel(ctx context.Context, db DBTX, arg UpsertLogChannelParams) (LogChannel, error) {
+func (q *Queries) UpsertLogChannel(ctx context.Context, db DBTX, arg UpsertLogChannelParams) (EventLogChannel, error) {
 	row := db.QueryRow(ctx, upsertLogChannel, arg.Type, arg.GuildID, arg.ChannelID)
-	var i LogChannel
+	var i EventLogChannel
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,

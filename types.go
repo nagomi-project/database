@@ -23,13 +23,32 @@ const (
 	ActionLogTypeGuildSettingsUpdate = gen.ActionLogTypeGuildSettingsUpdate
 )
 
-type LogChannelType = gen.LogChannelType
+type LogChannelType = gen.EventLogType
 
 const (
-	LogChannelTypeAll           = gen.LogChannelTypeAll
-	LogChannelTypeMessage       = gen.LogChannelTypeMessage
-	LogChannelTypeUser          = gen.LogChannelTypeUser
-	LogChannelTypeInfractionLog = gen.LogChannelTypeInfractionLog
+	EventLogTypeUserjoin           = gen.EventLogTypeUserjoin
+	EventLogTypeUserleave          = gen.EventLogTypeUserleave
+	EventLogTypeUserkick           = gen.EventLogTypeUserkick
+	EventLogTypeUserban            = gen.EventLogTypeUserban
+	EventLogTypeUserunban          = gen.EventLogTypeUserunban
+	EventLogTypeUserrolesUpdate    = gen.EventLogTypeUserrolesUpdate
+	EventLogTypeUsernicknameUpdate = gen.EventLogTypeUsernicknameUpdate
+	EventLogTypeUservoiceJoin      = gen.EventLogTypeUservoiceJoin
+	EventLogTypeUservoiceMove      = gen.EventLogTypeUservoiceMove
+	EventLogTypeUservoiceLeave     = gen.EventLogTypeUservoiceLeave
+	EventLogTypeMessagecreate      = gen.EventLogTypeMessagecreate
+	EventLogTypeMessageedit        = gen.EventLogTypeMessageedit
+	EventLogTypeMessagedelete      = gen.EventLogTypeMessagedelete
+	EventLogTypeMessageimageRemove = gen.EventLogTypeMessageimageRemove
+	EventLogTypeChannelcreate      = gen.EventLogTypeChannelcreate
+	EventLogTypeChannelupdate      = gen.EventLogTypeChannelupdate
+	EventLogTypeChanneldelete      = gen.EventLogTypeChanneldelete
+	EventLogTypeRolecreate         = gen.EventLogTypeRolecreate
+	EventLogTypeRoleupdate         = gen.EventLogTypeRoleupdate
+	EventLogTypeRoledelete         = gen.EventLogTypeRoledelete
+	EventLogTypeEmojicreate        = gen.EventLogTypeEmojicreate
+	EventLogTypeEmojiupdate        = gen.EventLogTypeEmojiupdate
+	EventLogTypeEmojidelete        = gen.EventLogTypeEmojidelete
 )
 
 type InfractionAction = gen.InfractionAction

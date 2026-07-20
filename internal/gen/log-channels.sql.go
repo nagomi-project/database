@@ -9,22 +9,22 @@ import (
 	"context"
 )
 
-const getGuildLogChannels = `-- name: GetGuildLogChannels :many
-SELECT created_at, updated_at, type, guild_id, channel_id FROM log_channels
+const getEventLogChannels = `-- name: GetEventLogChannels :many
+SELECT created_at, updated_at, type, guild_id, channel_id FROM event_log_channels
 WHERE
     guild_id = $1
 `
 
 // Fetch all of the log channels for the guild.
-func (q *Queries) GetGuildLogChannels(ctx context.Context, db DBTX, guildID string) ([]LogChannel, error) {
-	rows, err := db.Query(ctx, getGuildLogChannels, guildID)
+func (q *Queries) GetEventLogChannels(ctx context.Context, db DBTX, guildID string) ([]EventLogChannel, error) {
+	rows, err := db.Query(ctx, getEventLogChannels, guildID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LogChannel
+	var items []EventLogChannel
 	for rows.Next() {
-		var i LogChannel
+		var i EventLogChannel
 		if err := rows.Scan(
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -40,4 +40,24 @@ func (q *Queries) GetGuildLogChannels(ctx context.Context, db DBTX, guildID stri
 		return nil, err
 	}
 	return items, nil
+}
+
+const getEventLogSettings = `-- name: GetEventLogSettings :one
+SELECT created_at, updated_at, guild_id, ignored_channels, ignore_roles FROM event_log_settings
+WHERE
+    guild_id = $1
+`
+
+// Fetch the options for the event logs.
+func (q *Queries) GetEventLogSettings(ctx context.Context, db DBTX, guildID string) (EventLogSetting, error) {
+	row := db.QueryRow(ctx, getEventLogSettings, guildID)
+	var i EventLogSetting
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GuildID,
+		&i.IgnoredChannels,
+		&i.IgnoreRoles,
+	)
+	return i, err
 }

@@ -2,11 +2,9 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/nagomi-project/database/internal/gen"
 )
 
@@ -18,8 +16,109 @@ func newGuildSettings(db *Database) *guildSettings {
 	return &guildSettings{db}
 }
 
-func (g *guildSettings) CreateOrUpdateLogChannel(ctx context.Context, guildId, channelId, userId string, channelType LogChannelType, source ActionLogSource) (*gen.LogChannel, error) {
-	var channel *gen.LogChannel
+type EventLogChannel struct {
+	IgnoreChannels []string
+	IgnoreRoles    []string
+
+	UserJoin           *string
+	UserLeave          *string
+	UserKick           *string
+	UserBan            *string
+	UserUnban          *string
+	UserRolesUpdate    *string
+	UserNicknameUpdate *string
+	UserVoiceJoin      *string
+	UserVoiceMove      *string
+	UserVoiceLeave     *string
+
+	MessageCreate      *string
+	MessageEdit        *string
+	MessageDelete      *string
+	MessageImageRemove *string
+
+	ChannelCreate *string
+	ChannelUpdate *string
+	ChannelDelete *string
+
+	EmojiCreate *string
+	EmojiUpdate *string
+	EmojiDelete *string
+}
+
+func (g *guildSettings) formatLogChannels(channels []gen.EventLogChannel, options gen.EventLogSetting) *EventLogChannel {
+	logChannels := &EventLogChannel{
+		IgnoreChannels: options.IgnoredChannels,
+		IgnoreRoles:    options.IgnoreRoles,
+	}
+
+	for _, channel := range channels {
+		switch channel.Type {
+		case EventLogTypeUserjoin:
+			logChannels.UserJoin = &channel.ChannelID
+		case EventLogTypeUserleave:
+			logChannels.UserLeave = &channel.ChannelID
+		case EventLogTypeUserkick:
+			logChannels.UserKick = &channel.ChannelID
+		case EventLogTypeUserban:
+			logChannels.UserBan = &channel.ChannelID
+		case EventLogTypeUserunban:
+			logChannels.UserUnban = &channel.ChannelID
+		case EventLogTypeUserrolesUpdate:
+			logChannels.UserRolesUpdate = &channel.ChannelID
+		case EventLogTypeUsernicknameUpdate:
+			logChannels.UserNicknameUpdate = &channel.ChannelID
+		case EventLogTypeUservoiceJoin:
+			logChannels.UserVoiceJoin = &channel.ChannelID
+		case EventLogTypeUservoiceMove:
+			logChannels.UserVoiceMove = &channel.ChannelID
+		case EventLogTypeUservoiceLeave:
+			logChannels.UserVoiceLeave = &channel.ChannelID
+		case EventLogTypeMessagecreate:
+			logChannels.MessageCreate = &channel.ChannelID
+		case EventLogTypeMessageedit:
+			logChannels.MessageEdit = &channel.ChannelID
+		case EventLogTypeMessagedelete:
+			logChannels.MessageDelete = &channel.ChannelID
+		case EventLogTypeMessageimageRemove:
+			logChannels.MessageImageRemove = &channel.ChannelID
+		case EventLogTypeChannelcreate:
+			logChannels.ChannelCreate = &channel.ChannelID
+		case EventLogTypeChannelupdate:
+			logChannels.ChannelUpdate = &channel.ChannelID
+		case EventLogTypeChanneldelete:
+			logChannels.ChannelDelete = &channel.ChannelID
+		case EventLogTypeEmojicreate:
+			logChannels.EmojiCreate = &channel.ChannelID
+		case EventLogTypeEmojiupdate:
+			logChannels.EmojiUpdate = &channel.ChannelID
+		case EventLogTypeEmojidelete:
+			logChannels.EmojiDelete = &channel.ChannelID
+		}
+	}
+
+	return logChannels
+}
+
+func (g *guildSettings) getLogChannels(ctx context.Context, dbtx gen.DBTX, guildId string) (*EventLogChannel, error) {
+	options, err := g.db.queries.GetEventLogSettings(ctx, dbtx, guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	channels, err := g.db.queries.GetEventLogChannels(ctx, dbtx, guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	return g.formatLogChannels(channels, options), nil
+}
+
+func (g *guildSettings) GetLogChannels(ctx context.Context, guildId string) (*EventLogChannel, error) {
+	return g.getLogChannels(ctx, g.db.dbtx, guildId)
+}
+
+func (g *guildSettings) CreateOrUpdateLogChannel(ctx context.Context, guildId, channelId, userId string, channelType LogChannelType, source ActionLogSource) (*gen.EventLogChannel, error) {
+	var channel *gen.EventLogChannel
 	if err := g.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
 		if err := g.db.queries.UpdateGuildRegistryTime(ctx, txDb.dbtx, guildId); err != nil {
 			return err
@@ -88,16 +187,11 @@ type InfractionSettings struct {
 	InfractionProofChannelID     *string
 }
 
-type LogChannelSettings struct {
-	Type      LogChannelType
-	ChannelID string
-}
-
 type GuildSettings struct {
 	LastModified time.Time
 
-	Infractions InfractionSettings
-	LogChannels []LogChannelSettings
+	Infractions      InfractionSettings
+	EventLogChannels EventLogChannel
 }
 
 func (g *guildSettings) GetOrCreateGuildSettings(ctx context.Context, guildId string) (*GuildSettings, error) {
@@ -122,8 +216,8 @@ func (g *guildSettings) GetOrCreateGuildSettings(ctx context.Context, guildId st
 			return err
 		}
 
-		logChannels, err := txDb.queries.GetGuildLogChannels(ctx, txDb.dbtx, guildId)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		logChannels, err := g.getLogChannels(ctx, txDb.dbtx, guildId)
+		if err != nil {
 			return err
 		}
 
@@ -133,20 +227,13 @@ func (g *guildSettings) GetOrCreateGuildSettings(ctx context.Context, guildId st
 				AppealDuration:               infSettings.AppealDuration,
 				ShouldRequestInfractionProof: infSettings.RequestInfractionProof,
 			},
-			LogChannels: make([]LogChannelSettings, len(logChannels)),
+			EventLogChannels: *logChannels,
 		}
 		if infSettings.MutedRoleID.Valid {
 			settings.Infractions.MutedRoleID = &infSettings.MutedRoleID.String
 		}
 		if infSettings.InfractionProofID.Valid {
 			settings.Infractions.InfractionProofChannelID = &infSettings.InfractionProofID.String
-		}
-
-		for idx, logChannel := range logChannels {
-			settings.LogChannels[idx] = LogChannelSettings{
-				Type:      logChannel.Type,
-				ChannelID: logChannel.ChannelID,
-			}
 		}
 
 		return nil

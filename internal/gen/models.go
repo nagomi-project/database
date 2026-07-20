@@ -191,6 +191,127 @@ func AllAppealStatusValues() []AppealStatus {
 	}
 }
 
+type EventLogType string
+
+const (
+	EventLogTypeUserjoin           EventLogType = "user.join"
+	EventLogTypeUserleave          EventLogType = "user.leave"
+	EventLogTypeUserkick           EventLogType = "user.kick"
+	EventLogTypeUserban            EventLogType = "user.ban"
+	EventLogTypeUserunban          EventLogType = "user.unban"
+	EventLogTypeUserrolesUpdate    EventLogType = "user.roles_update"
+	EventLogTypeUsernicknameUpdate EventLogType = "user.nickname_update"
+	EventLogTypeUservoiceJoin      EventLogType = "user.voice_join"
+	EventLogTypeUservoiceMove      EventLogType = "user.voice_move"
+	EventLogTypeUservoiceLeave     EventLogType = "user.voice_leave"
+	EventLogTypeMessagecreate      EventLogType = "message.create"
+	EventLogTypeMessageedit        EventLogType = "message.edit"
+	EventLogTypeMessagedelete      EventLogType = "message.delete"
+	EventLogTypeMessageimageRemove EventLogType = "message.image_remove"
+	EventLogTypeChannelcreate      EventLogType = "channel.create"
+	EventLogTypeChannelupdate      EventLogType = "channel.update"
+	EventLogTypeChanneldelete      EventLogType = "channel.delete"
+	EventLogTypeRolecreate         EventLogType = "role.create"
+	EventLogTypeRoleupdate         EventLogType = "role.update"
+	EventLogTypeRoledelete         EventLogType = "role.delete"
+	EventLogTypeEmojicreate        EventLogType = "emoji.create"
+	EventLogTypeEmojiupdate        EventLogType = "emoji.update"
+	EventLogTypeEmojidelete        EventLogType = "emoji.delete"
+)
+
+func (e *EventLogType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EventLogType(s)
+	case string:
+		*e = EventLogType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EventLogType: %T", src)
+	}
+	return nil
+}
+
+type NullEventLogType struct {
+	EventLogType EventLogType
+	Valid        bool // Valid is true if EventLogType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEventLogType) Scan(value interface{}) error {
+	if value == nil {
+		ns.EventLogType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EventLogType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEventLogType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EventLogType), nil
+}
+
+func (e EventLogType) Valid() bool {
+	switch e {
+	case EventLogTypeUserjoin,
+		EventLogTypeUserleave,
+		EventLogTypeUserkick,
+		EventLogTypeUserban,
+		EventLogTypeUserunban,
+		EventLogTypeUserrolesUpdate,
+		EventLogTypeUsernicknameUpdate,
+		EventLogTypeUservoiceJoin,
+		EventLogTypeUservoiceMove,
+		EventLogTypeUservoiceLeave,
+		EventLogTypeMessagecreate,
+		EventLogTypeMessageedit,
+		EventLogTypeMessagedelete,
+		EventLogTypeMessageimageRemove,
+		EventLogTypeChannelcreate,
+		EventLogTypeChannelupdate,
+		EventLogTypeChanneldelete,
+		EventLogTypeRolecreate,
+		EventLogTypeRoleupdate,
+		EventLogTypeRoledelete,
+		EventLogTypeEmojicreate,
+		EventLogTypeEmojiupdate,
+		EventLogTypeEmojidelete:
+		return true
+	}
+	return false
+}
+
+func AllEventLogTypeValues() []EventLogType {
+	return []EventLogType{
+		EventLogTypeUserjoin,
+		EventLogTypeUserleave,
+		EventLogTypeUserkick,
+		EventLogTypeUserban,
+		EventLogTypeUserunban,
+		EventLogTypeUserrolesUpdate,
+		EventLogTypeUsernicknameUpdate,
+		EventLogTypeUservoiceJoin,
+		EventLogTypeUservoiceMove,
+		EventLogTypeUservoiceLeave,
+		EventLogTypeMessagecreate,
+		EventLogTypeMessageedit,
+		EventLogTypeMessagedelete,
+		EventLogTypeMessageimageRemove,
+		EventLogTypeChannelcreate,
+		EventLogTypeChannelupdate,
+		EventLogTypeChanneldelete,
+		EventLogTypeRolecreate,
+		EventLogTypeRoleupdate,
+		EventLogTypeRoledelete,
+		EventLogTypeEmojicreate,
+		EventLogTypeEmojiupdate,
+		EventLogTypeEmojidelete,
+	}
+}
+
 type InfractionAction string
 
 const (
@@ -267,70 +388,6 @@ func AllInfractionActionValues() []InfractionAction {
 	}
 }
 
-type LogChannelType string
-
-const (
-	LogChannelTypeAll           LogChannelType = "all"
-	LogChannelTypeMessage       LogChannelType = "message"
-	LogChannelTypeUser          LogChannelType = "user"
-	LogChannelTypeInfractionLog LogChannelType = "infraction_log"
-)
-
-func (e *LogChannelType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = LogChannelType(s)
-	case string:
-		*e = LogChannelType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for LogChannelType: %T", src)
-	}
-	return nil
-}
-
-type NullLogChannelType struct {
-	LogChannelType LogChannelType
-	Valid          bool // Valid is true if LogChannelType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullLogChannelType) Scan(value interface{}) error {
-	if value == nil {
-		ns.LogChannelType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.LogChannelType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullLogChannelType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.LogChannelType), nil
-}
-
-func (e LogChannelType) Valid() bool {
-	switch e {
-	case LogChannelTypeAll,
-		LogChannelTypeMessage,
-		LogChannelTypeUser,
-		LogChannelTypeInfractionLog:
-		return true
-	}
-	return false
-}
-
-func AllLogChannelTypeValues() []LogChannelType {
-	return []LogChannelType{
-		LogChannelTypeAll,
-		LogChannelTypeMessage,
-		LogChannelTypeUser,
-		LogChannelTypeInfractionLog,
-	}
-}
-
 type ActionLog struct {
 	CreatedAt pgtype.Timestamptz
 	ID        int64
@@ -359,6 +416,22 @@ type DiscordOauthSession struct {
 	ClientID     string
 	AccessToken  []byte
 	RefreshToken []byte
+}
+
+type EventLogChannel struct {
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	Type      EventLogType
+	GuildID   string
+	ChannelID string
+}
+
+type EventLogSetting struct {
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	GuildID         string
+	IgnoredChannels []string
+	IgnoreRoles     []string
 }
 
 type GuildsRegistry struct {
@@ -429,14 +502,6 @@ type InfractionSetting struct {
 	AppealDuration         int16
 	InfractionProofID      pgtype.Text
 	RequestInfractionProof bool
-}
-
-type LogChannel struct {
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	Type      LogChannelType
-	GuildID   string
-	ChannelID string
 }
 
 type NextInfractionID struct {

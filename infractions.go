@@ -29,7 +29,7 @@ type InfractionEntry struct {
 	MemberID    string
 	ModeratorID string
 
-	Action   InfractionAction
+	Action   ModerationAction
 	Reason   *string
 	ProofURL *string
 
@@ -39,7 +39,7 @@ type InfractionEntry struct {
 }
 
 // newInfractionEntryFromDetails formats data from the database into a public, usable InfractionEntry structure.
-func newInfractionEntryFromDetails(d gen.InfractionDetail) *InfractionEntry {
+func newInfractionEntryFromDetails(d gen.ModerationCaseDetail) *InfractionEntry {
 	e := InfractionEntry{
 		IssuedAt:   d.CreatedAt.Time,
 		ModifiedAt: d.UpdatedAt.Time,
@@ -88,7 +88,7 @@ func (i *infractions) GetExpiringInfractions(ctx context.Context, cutoff time.Ti
 // InfractMemberWithCallback will add a member infraction and require passing in a callback before the database will commit.
 //
 // This is for when the Discord API errors, it allows rolling back the transaction so unnecessary data is not stored.
-func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, memberId, moderatorId string, action InfractionAction, duration *time.Duration, reason *string, appealable *bool, cb func(e InfractionEntry) error) (*InfractionEntry, error) {
+func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, memberId, moderatorId string, action ModerationAction, duration *time.Duration, reason *string, appealable *bool, cb func(e InfractionEntry) error) (*InfractionEntry, error) {
 	if _, err := i.db.GuildSettings.GetOrCreateGuildSettings(ctx, guildId); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 		entry.Hidden = infraction.Hidden
 
 		switch action {
-		case InfractionActionMute:
+		case ModerationActionMute:
 			if _, err := txDb.queries.ScheduleInfraction(ctx, txDb.dbtx, gen.ScheduleInfractionParams{
 				Expiry:   expiry,
 				GuildID:  guildId,
@@ -144,7 +144,7 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 			}
 
 			entry.Active = true
-		case InfractionActionBan:
+		case ModerationActionBan:
 			canAppealBan := NullableBoolToBool(appealable)
 
 			if _, err := txDb.queries.ScheduleInfraction(ctx, txDb.dbtx, gen.ScheduleInfractionParams{
@@ -173,11 +173,11 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 			}
 
 			entry.Appealable = canAppealBan.Bool
-		case InfractionActionUnmute:
+		case ModerationActionUnmute:
 			if _, err := txDb.queries.UnscheduleInfractionByType(ctx, txDb.dbtx, gen.UnscheduleInfractionByTypeParams{
 				GuildID:  guildId,
 				MemberID: memberId,
-				Action:   InfractionActionMute,
+				Action:   ModerationActionMute,
 			}); err != nil {
 				if err == pgx.ErrNoRows {
 					return ErrUserNotMuted
@@ -185,11 +185,11 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 
 				return err
 			}
-		case InfractionActionUnban:
+		case ModerationActionUnban:
 			if _, err := txDb.queries.UnscheduleInfractionByType(ctx, txDb.dbtx, gen.UnscheduleInfractionByTypeParams{
 				GuildID:  guildId,
 				MemberID: memberId,
-				Action:   InfractionActionBan,
+				Action:   ModerationActionBan,
 			}); err != nil {
 				if err == pgx.ErrNoRows {
 					return ErrUserNotBanned
@@ -219,7 +219,7 @@ func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, me
 }
 
 // InfractMember will add a member infraction.
-func (i *infractions) InfractMember(ctx context.Context, guildId, memberId, moderatorId string, action InfractionAction, duration *time.Duration, reason *string, appealable *bool) (*InfractionEntry, error) {
+func (i *infractions) InfractMember(ctx context.Context, guildId, memberId, moderatorId string, action ModerationAction, duration *time.Duration, reason *string, appealable *bool) (*InfractionEntry, error) {
 	return i.InfractMemberWithCallback(ctx,
 		guildId, memberId, moderatorId,
 		action, duration, reason, appealable,
@@ -331,7 +331,7 @@ func (i *infractions) UpdateInfractionCaseDuration(ctx context.Context, guildId 
 		}
 
 		switch originalEntry.Action {
-		case InfractionActionBan, InfractionActionMute:
+		case ModerationActionBan, ModerationActionMute:
 			expiry := time.Now().Add(duration)
 			if originalEntry.CreatedAt.Valid {
 				expiry = originalEntry.CreatedAt.Time.Add(duration)
@@ -379,7 +379,7 @@ func (i *infractions) UpdateInfractionCaseExpiry(ctx context.Context, guildId st
 		}
 
 		switch originalEntry.Action {
-		case InfractionActionBan, InfractionActionMute:
+		case ModerationActionBan, ModerationActionMute:
 
 			if _, err := txDb.queries.ModifyScheduledInfraction(ctx, txDb.dbtx, gen.ModifyScheduledInfractionParams{
 				GuildID:          guildId,

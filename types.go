@@ -50,17 +50,17 @@ const (
 	EventLogTypeEmojiDelete        = gen.EventLogTypeEmojiDelete
 )
 
-type InfractionAction = gen.InfractionAction
+type ModerationAction = gen.ModerationAction
 
 const (
-	InfractionActionNote    = gen.InfractionActionNote
-	InfractionActionWarn    = gen.InfractionActionWarn
-	InfractionActionMute    = gen.InfractionActionMute
-	InfractionActionUnmute  = gen.InfractionActionUnmute
-	InfractionActionKick    = gen.InfractionActionKick
-	InfractionActionBan     = gen.InfractionActionBan
-	InfractionActionUnban   = gen.InfractionActionUnban
-	InfractionActionSoftban = gen.InfractionActionSoftban
+	ModerationActionNote    = gen.ModerationActionNote
+	ModerationActionWarn    = gen.ModerationActionWarn
+	ModerationActionMute    = gen.ModerationActionMute
+	ModerationActionUnmute  = gen.ModerationActionUnmute
+	ModerationActionKick    = gen.ModerationActionKick
+	ModerationActionBan     = gen.ModerationActionBan
+	ModerationActionUnban   = gen.ModerationActionUnban
+	ModerationActionSoftban = gen.ModerationActionSoftban
 )
 
 type AppealStatus = gen.AppealStatus

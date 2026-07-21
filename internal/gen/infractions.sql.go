@@ -41,12 +41,12 @@ func (q *Queries) GetActiveBan(ctx context.Context, db DBTX, arg GetActiveBanPar
 }
 
 const getActiveBanInfraction = `-- name: GetActiveBanInfraction :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
     AND active = TRUE
-    AND action = 'ban'::infraction_action
+    AND action = 'ban'::moderation_action
 `
 
 type GetActiveBanInfractionParams struct {
@@ -55,9 +55,9 @@ type GetActiveBanInfractionParams struct {
 }
 
 // Fetches an active ban infraction for a member.
-func (q *Queries) GetActiveBanInfraction(ctx context.Context, db DBTX, arg GetActiveBanInfractionParams) (InfractionDetail, error) {
+func (q *Queries) GetActiveBanInfraction(ctx context.Context, db DBTX, arg GetActiveBanInfractionParams) (ModerationCaseDetail, error) {
 	row := db.QueryRow(ctx, getActiveBanInfraction, arg.GuildID, arg.MemberID)
-	var i InfractionDetail
+	var i ModerationCaseDetail
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -77,12 +77,12 @@ func (q *Queries) GetActiveBanInfraction(ctx context.Context, db DBTX, arg GetAc
 }
 
 const getActiveMuteInfraction = `-- name: GetActiveMuteInfraction :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
     AND active = TRUE
-    AND action = 'mute'::infraction_action
+    AND action = 'mute'::moderation_action
 `
 
 type GetActiveMuteInfractionParams struct {
@@ -91,9 +91,9 @@ type GetActiveMuteInfractionParams struct {
 }
 
 // Fetches an active mute infraction for a member.
-func (q *Queries) GetActiveMuteInfraction(ctx context.Context, db DBTX, arg GetActiveMuteInfractionParams) (InfractionDetail, error) {
+func (q *Queries) GetActiveMuteInfraction(ctx context.Context, db DBTX, arg GetActiveMuteInfractionParams) (ModerationCaseDetail, error) {
 	row := db.QueryRow(ctx, getActiveMuteInfraction, arg.GuildID, arg.MemberID)
-	var i InfractionDetail
+	var i ModerationCaseDetail
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -155,22 +155,22 @@ func (q *Queries) GetBanAppealLogsByCaseId(ctx context.Context, db DBTX, arg Get
 }
 
 const getExpiringInfractionCases = `-- name: GetExpiringInfractionCases :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     active = TRUE
     AND expires_at <= $1
 `
 
 // Fetch a list of infractions that will be expiring within a specified cutoff time.
-func (q *Queries) GetExpiringInfractionCases(ctx context.Context, db DBTX, cutoff pgtype.Timestamptz) ([]InfractionDetail, error) {
+func (q *Queries) GetExpiringInfractionCases(ctx context.Context, db DBTX, cutoff pgtype.Timestamptz) ([]ModerationCaseDetail, error) {
 	rows, err := db.Query(ctx, getExpiringInfractionCases, cutoff)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []InfractionDetail
+	var items []ModerationCaseDetail
 	for rows.Next() {
-		var i InfractionDetail
+		var i ModerationCaseDetail
 		if err := rows.Scan(
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -220,7 +220,7 @@ func (q *Queries) GetGuildInfractionSettings(ctx context.Context, db DBTX, guild
 }
 
 const getInfractionByCaseId = `-- name: GetInfractionByCaseId :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND case_number = $2
@@ -232,9 +232,9 @@ type GetInfractionByCaseIdParams struct {
 }
 
 // Fetches an infraction's information based on the case id.
-func (q *Queries) GetInfractionByCaseId(ctx context.Context, db DBTX, arg GetInfractionByCaseIdParams) (InfractionDetail, error) {
+func (q *Queries) GetInfractionByCaseId(ctx context.Context, db DBTX, arg GetInfractionByCaseIdParams) (ModerationCaseDetail, error) {
 	row := db.QueryRow(ctx, getInfractionByCaseId, arg.GuildID, arg.CaseID)
-	var i InfractionDetail
+	var i ModerationCaseDetail
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -254,7 +254,7 @@ func (q *Queries) GetInfractionByCaseId(ctx context.Context, db DBTX, arg GetInf
 }
 
 const getMemberInfractions = `-- name: GetMemberInfractions :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE guild_id = $1 AND member_id = $2
 ORDER BY case_number DESC
 `
@@ -265,15 +265,15 @@ type GetMemberInfractionsParams struct {
 }
 
 // Fetches all of the infractions for a member
-func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemberInfractionsParams) ([]InfractionDetail, error) {
+func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemberInfractionsParams) ([]ModerationCaseDetail, error) {
 	rows, err := db.Query(ctx, getMemberInfractions, arg.GuildID, arg.MemberID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []InfractionDetail
+	var items []ModerationCaseDetail
 	for rows.Next() {
-		var i InfractionDetail
+		var i ModerationCaseDetail
 		if err := rows.Scan(
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -300,7 +300,7 @@ func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemb
 }
 
 const getMemberInfractionsPage = `-- name: GetMemberInfractionsPage :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM infraction_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
@@ -319,7 +319,7 @@ type GetMemberInfractionsPageParams struct {
 }
 
 // Fetches a list of infractions. This uses a pre-defined offset for "pagination".
-func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg GetMemberInfractionsPageParams) ([]InfractionDetail, error) {
+func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg GetMemberInfractionsPageParams) ([]ModerationCaseDetail, error) {
 	rows, err := db.Query(ctx, getMemberInfractionsPage,
 		arg.GuildID,
 		arg.MemberID,
@@ -331,9 +331,9 @@ func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg Get
 		return nil, err
 	}
 	defer rows.Close()
-	var items []InfractionDetail
+	var items []ModerationCaseDetail
 	for rows.Next() {
-		var i InfractionDetail
+		var i ModerationCaseDetail
 		if err := rows.Scan(
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -363,7 +363,7 @@ const getMemberInfractionsPageDetails = `-- name: GetMemberInfractionsPageDetail
 SELECT
     COUNT(*)::INTEGER AS total_entries,
     CEIL(COUNT(*)::NUMERIC / COALESCE($1, 5))::INTEGER AS total_pages
-FROM infraction_details
+FROM moderation_case_details
 WHERE
     guild_id = $2
     AND member_id = $3
@@ -396,14 +396,14 @@ func (q *Queries) GetMemberInfractionsPageDetails(ctx context.Context, db DBTX, 
 }
 
 const infractMember = `-- name: InfractMember :one
-WITH next_infraction AS (
-    INSERT INTO next_infraction_ids (guild_id, next_id)
+WITH next_case AS (
+    INSERT INTO moderation_case_counters (guild_id, next_id)
     VALUES ($2, 2)
     ON CONFLICT (guild_id) DO UPDATE SET
-        next_id = next_infraction_ids.next_id + 1
+        next_id = moderation_case_counters.next_id + 1
     RETURNING next_id - 1 AS case_number
 )
-INSERT INTO infraction_log (
+INSERT INTO moderation_cases (
     expires_at,
     guild_id,
     case_number,
@@ -415,12 +415,12 @@ INSERT INTO infraction_log (
 SELECT
     $1,
     $2,
-    next_infraction.case_number,
+    next_case.case_number,
     $3,
     $4,
     $5,
     $6
-FROM next_infraction
+FROM next_case
 RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason
 `
 
@@ -429,12 +429,12 @@ type InfractMemberParams struct {
 	GuildID     string
 	MemberID    string
 	ModeratorID string
-	Action      InfractionAction
+	Action      ModerationAction
 	Reason      pgtype.Text
 }
 
 // Infracts a member.
-func (q *Queries) InfractMember(ctx context.Context, db DBTX, arg InfractMemberParams) (InfractionLog, error) {
+func (q *Queries) InfractMember(ctx context.Context, db DBTX, arg InfractMemberParams) (ModerationCase, error) {
 	row := db.QueryRow(ctx, infractMember,
 		arg.Expiry,
 		arg.GuildID,
@@ -443,7 +443,7 @@ func (q *Queries) InfractMember(ctx context.Context, db DBTX, arg InfractMemberP
 		arg.Action,
 		arg.Reason,
 	)
-	var i InfractionLog
+	var i ModerationCase
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -489,7 +489,7 @@ func (q *Queries) InsertActiveBan(ctx context.Context, db DBTX, arg InsertActive
 }
 
 const insertInfractionProofMessage = `-- name: InsertInfractionProofMessage :one
-INSERT INTO infraction_proof_messages (
+INSERT INTO moderation_case_proof_messages (
     guild_id,
     case_number,
     message_url
@@ -506,9 +506,9 @@ type InsertInfractionProofMessageParams struct {
 }
 
 // Inserts a message url for an infraction's proof.
-func (q *Queries) InsertInfractionProofMessage(ctx context.Context, db DBTX, arg InsertInfractionProofMessageParams) (InfractionProofMessage, error) {
+func (q *Queries) InsertInfractionProofMessage(ctx context.Context, db DBTX, arg InsertInfractionProofMessageParams) (ModerationCaseProofMessage, error) {
 	row := db.QueryRow(ctx, insertInfractionProofMessage, arg.GuildID, arg.CaseID, arg.MessageUrl)
-	var i InfractionProofMessage
+	var i ModerationCaseProofMessage
 	err := row.Scan(&i.GuildID, &i.CaseNumber, &i.MessageUrl)
 	return i, err
 }
@@ -558,12 +558,12 @@ func (q *Queries) LogBanAppealStatus(ctx context.Context, db DBTX, arg LogBanApp
 
 const modifyScheduledInfraction = `-- name: ModifyScheduledInfraction :one
 WITH updated_infraction AS (
-    UPDATE infraction_log SET
+    UPDATE moderation_cases SET
         updated_at = now(),
         expires_at = $1
     WHERE
-        infraction_log.guild_id = $2
-        AND infraction_log.case_number = $3
+        moderation_cases.guild_id = $2
+        AND moderation_cases.case_number = $3
     RETURNING guild_id, case_number
 )
 UPDATE infraction_expiry_schedule SET
@@ -643,7 +643,7 @@ type ScheduleInfractionParams struct {
 	GuildID  string
 	CaseID   int32
 	MemberID string
-	Action   InfractionAction
+	Action   ModerationAction
 }
 
 // Schedules an infraction.
@@ -705,7 +705,7 @@ RETURNING expires_at, guild_id, case_number, member_id, action
 type UnscheduleInfractionByTypeParams struct {
 	GuildID  string
 	MemberID string
-	Action   InfractionAction
+	Action   ModerationAction
 }
 
 // Unschedules an infraction based on its type.
@@ -767,20 +767,20 @@ func (q *Queries) UpdateActiveBan(ctx context.Context, db DBTX, arg UpdateActive
 
 const updateInfractionCaseDetails = `-- name: UpdateInfractionCaseDetails :one
 WITH updated_case AS (
-    UPDATE infraction_log SET
+    UPDATE moderation_cases SET
         updated_at = now(),
-        hidden = COALESCE($1, infraction_log.hidden),
-        reason = COALESCE($2, infraction_log.reason)
+        hidden = COALESCE($1, moderation_cases.hidden),
+        reason = COALESCE($2, moderation_cases.reason)
     WHERE
-        infraction_log.guild_id = $3
-        AND infraction_log.case_number = $4
+        moderation_cases.guild_id = $3
+        AND moderation_cases.case_number = $4
     RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason
 )
-SELECT infraction_details.created_at, infraction_details.updated_at, infraction_details.expires_at, infraction_details.guild_id, infraction_details.case_number, infraction_details.member_id, infraction_details.moderator_id, infraction_details.hidden, infraction_details.action, infraction_details.reason, infraction_details.active, infraction_details.appealable, infraction_details.message_url
-FROM infraction_details
+SELECT moderation_case_details.created_at, moderation_case_details.updated_at, moderation_case_details.expires_at, moderation_case_details.guild_id, moderation_case_details.case_number, moderation_case_details.member_id, moderation_case_details.moderator_id, moderation_case_details.hidden, moderation_case_details.action, moderation_case_details.reason, moderation_case_details.active, moderation_case_details.appealable, moderation_case_details.message_url
+FROM moderation_case_details
 JOIN updated_case ON
-    updated_case.guild_id = infraction_details.guild_id
-    AND updated_case.case_number = infraction_details.case_number
+    updated_case.guild_id = moderation_case_details.guild_id
+    AND updated_case.case_number = moderation_case_details.case_number
 `
 
 type UpdateInfractionCaseDetailsParams struct {
@@ -791,14 +791,14 @@ type UpdateInfractionCaseDetailsParams struct {
 }
 
 // Updates the information regarding an infraction case and returns the new infraction.
-func (q *Queries) UpdateInfractionCaseDetails(ctx context.Context, db DBTX, arg UpdateInfractionCaseDetailsParams) (InfractionDetail, error) {
+func (q *Queries) UpdateInfractionCaseDetails(ctx context.Context, db DBTX, arg UpdateInfractionCaseDetailsParams) (ModerationCaseDetail, error) {
 	row := db.QueryRow(ctx, updateInfractionCaseDetails,
 		arg.Hidden,
 		arg.Reason,
 		arg.GuildID,
 		arg.CaseID,
 	)
-	var i InfractionDetail
+	var i ModerationCaseDetail
 	err := row.Scan(
 		&i.CreatedAt,
 		&i.UpdatedAt,

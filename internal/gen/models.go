@@ -309,79 +309,79 @@ func AllEventLogTypeValues() []EventLogType {
 	}
 }
 
-type InfractionAction string
+type ModerationAction string
 
 const (
-	InfractionActionNote    InfractionAction = "note"
-	InfractionActionWarn    InfractionAction = "warn"
-	InfractionActionMute    InfractionAction = "mute"
-	InfractionActionUnmute  InfractionAction = "unmute"
-	InfractionActionKick    InfractionAction = "kick"
-	InfractionActionBan     InfractionAction = "ban"
-	InfractionActionUnban   InfractionAction = "unban"
-	InfractionActionSoftban InfractionAction = "softban"
+	ModerationActionNote    ModerationAction = "note"
+	ModerationActionWarn    ModerationAction = "warn"
+	ModerationActionMute    ModerationAction = "mute"
+	ModerationActionUnmute  ModerationAction = "unmute"
+	ModerationActionKick    ModerationAction = "kick"
+	ModerationActionBan     ModerationAction = "ban"
+	ModerationActionUnban   ModerationAction = "unban"
+	ModerationActionSoftban ModerationAction = "softban"
 )
 
-func (e *InfractionAction) Scan(src interface{}) error {
+func (e *ModerationAction) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = InfractionAction(s)
+		*e = ModerationAction(s)
 	case string:
-		*e = InfractionAction(s)
+		*e = ModerationAction(s)
 	default:
-		return fmt.Errorf("unsupported scan type for InfractionAction: %T", src)
+		return fmt.Errorf("unsupported scan type for ModerationAction: %T", src)
 	}
 	return nil
 }
 
-type NullInfractionAction struct {
-	InfractionAction InfractionAction
-	Valid            bool // Valid is true if InfractionAction is not NULL
+type NullModerationAction struct {
+	ModerationAction ModerationAction
+	Valid            bool // Valid is true if ModerationAction is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullInfractionAction) Scan(value interface{}) error {
+func (ns *NullModerationAction) Scan(value interface{}) error {
 	if value == nil {
-		ns.InfractionAction, ns.Valid = "", false
+		ns.ModerationAction, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.InfractionAction.Scan(value)
+	return ns.ModerationAction.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullInfractionAction) Value() (driver.Value, error) {
+func (ns NullModerationAction) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.InfractionAction), nil
+	return string(ns.ModerationAction), nil
 }
 
-func (e InfractionAction) Valid() bool {
+func (e ModerationAction) Valid() bool {
 	switch e {
-	case InfractionActionNote,
-		InfractionActionWarn,
-		InfractionActionMute,
-		InfractionActionUnmute,
-		InfractionActionKick,
-		InfractionActionBan,
-		InfractionActionUnban,
-		InfractionActionSoftban:
+	case ModerationActionNote,
+		ModerationActionWarn,
+		ModerationActionMute,
+		ModerationActionUnmute,
+		ModerationActionKick,
+		ModerationActionBan,
+		ModerationActionUnban,
+		ModerationActionSoftban:
 		return true
 	}
 	return false
 }
 
-func AllInfractionActionValues() []InfractionAction {
-	return []InfractionAction{
-		InfractionActionNote,
-		InfractionActionWarn,
-		InfractionActionMute,
-		InfractionActionUnmute,
-		InfractionActionKick,
-		InfractionActionBan,
-		InfractionActionUnban,
-		InfractionActionSoftban,
+func AllModerationActionValues() []ModerationAction {
+	return []ModerationAction{
+		ModerationActionNote,
+		ModerationActionWarn,
+		ModerationActionMute,
+		ModerationActionUnmute,
+		ModerationActionKick,
+		ModerationActionBan,
+		ModerationActionUnban,
+		ModerationActionSoftban,
 	}
 }
 
@@ -448,47 +448,12 @@ type InfractionActiveBan struct {
 	AppealableAt    pgtype.Timestamptz
 }
 
-type InfractionDetail struct {
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	ExpiresAt   pgtype.Timestamptz
-	GuildID     string
-	CaseNumber  int32
-	MemberID    string
-	ModeratorID string
-	Hidden      bool
-	Action      InfractionAction
-	Reason      pgtype.Text
-	Active      bool
-	Appealable  bool
-	MessageUrl  pgtype.Text
-}
-
 type InfractionExpirySchedule struct {
 	ExpiresAt  pgtype.Timestamptz
 	GuildID    string
 	CaseNumber int32
 	MemberID   string
-	Action     InfractionAction
-}
-
-type InfractionLog struct {
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	ExpiresAt   pgtype.Timestamptz
-	GuildID     string
-	CaseNumber  int32
-	MemberID    string
-	ModeratorID string
-	Hidden      bool
-	Action      InfractionAction
-	Reason      pgtype.Text
-}
-
-type InfractionProofMessage struct {
-	GuildID    string
-	CaseNumber int32
-	MessageUrl string
+	Action     ModerationAction
 }
 
 type InfractionSetting struct {
@@ -501,9 +466,44 @@ type InfractionSetting struct {
 	RequestInfractionProof bool
 }
 
-type NextInfractionID struct {
+type ModerationCase struct {
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	GuildID     string
+	CaseNumber  int32
+	MemberID    string
+	ModeratorID string
+	Hidden      bool
+	Action      ModerationAction
+	Reason      pgtype.Text
+}
+
+type ModerationCaseCounter struct {
 	GuildID string
 	NextID  int64
+}
+
+type ModerationCaseDetail struct {
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	GuildID     string
+	CaseNumber  int32
+	MemberID    string
+	ModeratorID string
+	Hidden      bool
+	Action      ModerationAction
+	Reason      pgtype.Text
+	Active      bool
+	Appealable  bool
+	MessageUrl  pgtype.Text
+}
+
+type ModerationCaseProofMessage struct {
+	GuildID    string
+	CaseNumber int32
+	MessageUrl string
 }
 
 type NextLogID struct {

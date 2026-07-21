@@ -13,14 +13,14 @@ WHERE
 
 -- name: GetExpiringInfractionCases :many
 -- Fetch a list of infractions that will be expiring within a specified cutoff time.
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE
     active = TRUE
     AND expires_at <= @cutoff;
 
 -- name: InsertInfractionProofMessage :one
 -- Inserts a message url for an infraction's proof.
-INSERT INTO infraction_proof_messages (
+INSERT INTO moderation_case_proof_messages (
     guild_id,
     case_number,
     message_url
@@ -31,14 +31,14 @@ RETURNING *;
 
 -- name: GetInfractionByCaseId :one
 -- Fetches an infraction's information based on the case id.
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE
     guild_id = @guild_id
     AND case_number = @case_id;
 
 -- name: GetMemberInfractionsPage :many
 -- Fetches a list of infractions. This uses a pre-defined offset for "pagination".
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
@@ -52,7 +52,7 @@ LIMIT COALESCE(sqlc.narg('page_size'), 5);
 SELECT
     COUNT(*)::INTEGER AS total_entries,
     CEIL(COUNT(*)::NUMERIC / COALESCE(sqlc.narg('page_size'), 5))::INTEGER AS total_pages
-FROM infraction_details
+FROM moderation_case_details
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
@@ -60,38 +60,38 @@ WHERE
 
 -- name: GetMemberInfractions :many
 -- Fetches all of the infractions for a member
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE guild_id = @guild_id AND member_id = @member_id
 ORDER BY case_number DESC;
 
 -- name: GetActiveMuteInfraction :one
 -- Fetches an active mute infraction for a member.
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
     AND active = TRUE
-    AND action = 'mute'::infraction_action;
+    AND action = 'mute'::moderation_action;
 
 -- name: GetActiveBanInfraction :one
 -- Fetches an active ban infraction for a member.
-SELECT * FROM infraction_details
+SELECT * FROM moderation_case_details
 WHERE
     guild_id = @guild_id
     AND member_id = @member_id
     AND active = TRUE
-    AND action = 'ban'::infraction_action;
+    AND action = 'ban'::moderation_action;
 
 -- name: InfractMember :one
 -- Infracts a member.
-WITH next_infraction AS (
-    INSERT INTO next_infraction_ids (guild_id, next_id)
+WITH next_case AS (
+    INSERT INTO moderation_case_counters (guild_id, next_id)
     VALUES (@guild_id, 2)
     ON CONFLICT (guild_id) DO UPDATE SET
-        next_id = next_infraction_ids.next_id + 1
+        next_id = moderation_case_counters.next_id + 1
     RETURNING next_id - 1 AS case_number
 )
-INSERT INTO infraction_log (
+INSERT INTO moderation_cases (
     expires_at,
     guild_id,
     case_number,
@@ -103,31 +103,31 @@ INSERT INTO infraction_log (
 SELECT
     @expiry,
     @guild_id,
-    next_infraction.case_number,
+    next_case.case_number,
     @member_id,
     @moderator_id,
     @action,
     @reason
-FROM next_infraction
+FROM next_case
 RETURNING *;
 
 -- name: UpdateInfractionCaseDetails :one
 -- Updates the information regarding an infraction case and returns the new infraction.
 WITH updated_case AS (
-    UPDATE infraction_log SET
+    UPDATE moderation_cases SET
         updated_at = now(),
-        hidden = COALESCE(sqlc.narg('hidden'), infraction_log.hidden),
-        reason = COALESCE(sqlc.narg('reason'), infraction_log.reason)
+        hidden = COALESCE(sqlc.narg('hidden'), moderation_cases.hidden),
+        reason = COALESCE(sqlc.narg('reason'), moderation_cases.reason)
     WHERE
-        infraction_log.guild_id = @guild_id
-        AND infraction_log.case_number = @case_id
+        moderation_cases.guild_id = @guild_id
+        AND moderation_cases.case_number = @case_id
     RETURNING *
 )
-SELECT infraction_details.*
-FROM infraction_details
+SELECT moderation_case_details.*
+FROM moderation_case_details
 JOIN updated_case ON
-    updated_case.guild_id = infraction_details.guild_id
-    AND updated_case.case_number = infraction_details.case_number;
+    updated_case.guild_id = moderation_case_details.guild_id
+    AND updated_case.case_number = moderation_case_details.case_number;
 
 -- name: ScheduleInfraction :one
 -- Schedules an infraction.
@@ -145,12 +145,12 @@ RETURNING *;
 -- name: ModifyScheduledInfraction :one
 -- Modifies the duration for a scheduled infraction.
 WITH updated_infraction AS (
-    UPDATE infraction_log SET
+    UPDATE moderation_cases SET
         updated_at = now(),
         expires_at = @modified_duration
     WHERE
-        infraction_log.guild_id = @guild_id
-        AND infraction_log.case_number = @case_id
+        moderation_cases.guild_id = @guild_id
+        AND moderation_cases.case_number = @case_id
     RETURNING guild_id, case_number
 )
 UPDATE infraction_expiry_schedule SET

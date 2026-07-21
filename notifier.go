@@ -87,5 +87,5 @@ type InfractionsNotificationEvent struct {
 	ExpiresAt  *time.Time          `json:"expires_at"`
 	GuildID    string              `json:"guild_id"`
 	MemberID   string              `json:"member_id"`
-	Action     InfractionAction    `json:"action"`
+	Action     ModerationAction    `json:"action"`
 }

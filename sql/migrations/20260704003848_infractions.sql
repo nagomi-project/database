@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS infraction_settings (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
-CREATE TYPE infraction_action AS ENUM (
+CREATE TYPE moderation_action AS ENUM (
     'note',
     'warn',
     'mute',
@@ -27,7 +27,7 @@ CREATE TYPE infraction_action AS ENUM (
     'softban'
 );
 
-CREATE TABLE IF NOT EXISTS next_infraction_ids (
+CREATE TABLE IF NOT EXISTS moderation_case_counters (
     guild_id SNOWFLAKE NOT NULL,
     next_id BIGINT NOT NULL DEFAULT 1,
 
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS next_infraction_ids (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS infraction_log (
+CREATE TABLE IF NOT EXISTS moderation_cases (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at TIMESTAMPTZ,
@@ -46,20 +46,20 @@ CREATE TABLE IF NOT EXISTS infraction_log (
     moderator_id SNOWFLAKE NOT NULL,
 
     hidden BOOLEAN NOT NULL DEFAULT FALSE,
-    action infraction_action NOT NULL,
+    action moderation_action NOT NULL,
     reason VARCHAR(512),
 
     PRIMARY KEY (guild_id, case_number),
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS infraction_proof_messages (
+CREATE TABLE IF NOT EXISTS moderation_case_proof_messages (
     guild_id SNOWFLAKE NOT NULL,
     case_number INT NOT NULL,
     message_url TEXT NOT NULL,
 
     PRIMARY KEY (guild_id, case_number),
-    FOREIGN KEY (guild_id, case_number) REFERENCES infraction_log (guild_id, case_number) ON DELETE CASCADE
+    FOREIGN KEY (guild_id, case_number) REFERENCES moderation_cases (guild_id, case_number) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS infraction_expiry_schedule (
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS infraction_expiry_schedule (
     guild_id SNOWFLAKE NOT NULL,
     case_number INT NOT NULL,
     member_id SNOWFLAKE NOT NULL,
-    action infraction_action NOT NULL,
+    action moderation_action NOT NULL,
 
     PRIMARY KEY (guild_id, case_number),
     UNIQUE (guild_id, member_id, action),
@@ -114,35 +114,35 @@ CREATE TABLE IF NOT EXISTS ban_appeal_logs (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
-CREATE VIEW infraction_details AS
+CREATE VIEW moderation_case_details AS
 SELECT
-    infraction_log.created_at,
-    infraction_log.updated_at,
-    infraction_log.expires_at,
-    infraction_log.guild_id,
-    infraction_log.case_number,
-    infraction_log.member_id,
-    infraction_log.moderator_id,
-    infraction_log.hidden,
-    infraction_log.action,
-    infraction_log.reason,
+    moderation_cases.created_at,
+    moderation_cases.updated_at,
+    moderation_cases.expires_at,
+    moderation_cases.guild_id,
+    moderation_cases.case_number,
+    moderation_cases.member_id,
+    moderation_cases.moderator_id,
+    moderation_cases.hidden,
+    moderation_cases.action,
+    moderation_cases.reason,
     CASE
         WHEN infraction_expiry_schedule.case_number IS NOT NULL THEN TRUE
         ELSE FALSE
     END AS active,
     COALESCE(infraction_active_bans.can_submit_appeal, FALSE) AS appealable,
-    infraction_proof_messages.message_url
-FROM infraction_log
+    moderation_case_proof_messages.message_url
+FROM moderation_cases
 LEFT JOIN infraction_expiry_schedule ON
-    infraction_expiry_schedule.guild_id = infraction_log.guild_id
-    AND infraction_expiry_schedule.member_id = infraction_log.member_id
-    AND infraction_expiry_schedule.case_number = infraction_log.case_number
-LEFT JOIN infraction_proof_messages ON
-    infraction_proof_messages.guild_id = infraction_log.guild_id
-    AND infraction_proof_messages.case_number = infraction_log.case_number
+    infraction_expiry_schedule.guild_id = moderation_cases.guild_id
+    AND infraction_expiry_schedule.member_id = moderation_cases.member_id
+    AND infraction_expiry_schedule.case_number = moderation_cases.case_number
+LEFT JOIN moderation_case_proof_messages ON
+    moderation_case_proof_messages.guild_id = moderation_cases.guild_id
+    AND moderation_case_proof_messages.case_number = moderation_cases.case_number
 LEFT JOIN infraction_active_bans ON
-    infraction_active_bans.guild_id = infraction_log.guild_id
-    AND infraction_active_bans.case_number = infraction_log.case_number;
+    infraction_active_bans.guild_id = moderation_cases.guild_id
+    AND infraction_active_bans.case_number = moderation_cases.case_number;
 
 -- +goose StatementBegin
 CREATE OR REPLACE FUNCTION infraction_expiry_schedule_events()
@@ -220,15 +220,15 @@ EXECUTE FUNCTION infraction_expiry_schedule_events();
 
 DROP FUNCTION IF EXISTS infraction_expiry_schedule_events() CASCADE;
 
-DROP VIEW IF EXISTS infraction_details;
+DROP VIEW IF EXISTS moderation_case_details;
 
 DROP TABLE IF EXISTS ban_appeal_logs;
 DROP TABLE IF EXISTS infraction_active_bans;
 DROP TABLE IF EXISTS infraction_expiry_schedule;
-DROP TABLE IF EXISTS infraction_proof_messages;
-DROP TABLE IF EXISTS infraction_log;
-DROP TABLE IF EXISTS next_infraction_ids;
+DROP TABLE IF EXISTS moderation_case_proof_messages;
+DROP TABLE IF EXISTS moderation_cases;
+DROP TABLE IF EXISTS moderation_case_counters;
 DROP TABLE IF EXISTS infraction_settings;
 
 DROP TYPE IF EXISTS appeal_status;
-DROP TYPE IF EXISTS infraction_action;
+DROP TYPE IF EXISTS moderation_action;

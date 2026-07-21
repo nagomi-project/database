@@ -129,13 +129,16 @@ CREATE TABLE IF NOT EXISTS event_log_channels (
 
 -- +goose Down
 
+DROP TABLE IF EXISTS event_log_channels;
+DROP TABLE IF EXISTS event_log_settings;
 DROP TABLE IF EXISTS action_logs;
 DROP TABLE IF EXISTS next_log_ids;
-DROP TABLE IF EXISTS event_log_channels;
+DROP TABLE IF EXISTS guild_modules;
 DROP TABLE IF EXISTS guilds_registry;
 
+DROP TYPE IF EXISTS event_log_type;
 DROP TYPE IF EXISTS action_log_source;
 DROP TYPE IF EXISTS action_log_type;
-DROP TYPE IF EXISTS log_channel_type;
+DROP TYPE IF EXISTS guild_module_type;
 
 DROP DOMAIN IF EXISTS SNOWFLAKE;

@@ -17,9 +17,6 @@ func newEventLog(db *Database) *eventLog {
 }
 
 type EventLogChannel struct {
-	IgnoreChannels []string
-	IgnoreRoles    []string
-
 	UserJoin           *string
 	UserLeave          *string
 	UserKick           *string
@@ -44,11 +41,8 @@ type EventLogChannel struct {
 	EmojiDelete *string
 }
 
-func (e *eventLog) formatLogChannels(channels []gen.EventLogChannel, options gen.EventLogSetting) *EventLogChannel {
-	logChannels := &EventLogChannel{
-		IgnoreChannels: options.IgnoredChannels,
-		IgnoreRoles:    options.IgnoreRoles,
-	}
+func (e *eventLog) formatLogChannels(channels []gen.EventLogChannel) *EventLogChannel {
+	logChannels := &EventLogChannel{}
 
 	for _, channel := range channels {
 		switch channel.Type {
@@ -138,17 +132,12 @@ func (e *eventLog) GetOrCreateConfiguration(ctx context.Context, guildId string)
 }
 
 func (e *eventLog) GetLogChannels(ctx context.Context, guildId string) (*EventLogChannel, error) {
-	options, err := e.db.queries.GetEventLogSettings(ctx, e.db.dbtx, guildId)
-	if err != nil {
-		return nil, err
-	}
-
 	channels, err := e.db.queries.GetEventLogChannels(ctx, e.db.dbtx, guildId)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err
 	}
 
-	return e.formatLogChannels(channels, options), nil
+	return e.formatLogChannels(channels), nil
 }
 
 func (e *eventLog) CreateOrUpdateLogChannel(ctx context.Context, guildId, channelId, userId string, channelType LogChannelType, source ActionLogSource) (*gen.EventLogChannel, error) {

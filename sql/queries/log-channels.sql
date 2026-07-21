@@ -1,3 +1,9 @@
+-- name: RegisterEventLogSettingsIfMissing :exec
+-- Inserts guild event log settings if they are not already created.
+INSERT INTO event_log_settings (guild_id)
+VALUES (@guild_id)
+ON CONFLICT (guild_id) DO NOTHING;
+
 -- name: GetEventLogSettings :one
 -- Fetch the options for the event logs.
 SELECT * FROM event_log_settings

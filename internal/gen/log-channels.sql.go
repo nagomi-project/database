@@ -62,6 +62,18 @@ func (q *Queries) GetEventLogSettings(ctx context.Context, db DBTX, guildID stri
 	return i, err
 }
 
+const registerEventLogSettingsIfMissing = `-- name: RegisterEventLogSettingsIfMissing :exec
+INSERT INTO event_log_settings (guild_id)
+VALUES ($1)
+ON CONFLICT (guild_id) DO NOTHING
+`
+
+// Inserts guild event log settings if they are not already created.
+func (q *Queries) RegisterEventLogSettingsIfMissing(ctx context.Context, db DBTX, guildID string) error {
+	_, err := db.Exec(ctx, registerEventLogSettingsIfMissing, guildID)
+	return err
+}
+
 const upsertLogChannel = `-- name: UpsertLogChannel :one
 INSERT INTO event_log_channels (type, guild_id, channel_id)
 VALUES ($1, $2, $3)

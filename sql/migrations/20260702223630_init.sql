@@ -11,6 +11,32 @@ CREATE TABLE IF NOT EXISTS guilds_registry (
     PRIMARY KEY (guild_id)
 );
 
+CREATE TYPE guild_module_type AS ENUM (
+    'infractions',
+    'ban_appeals',
+
+    'event_logs',
+    'tickets',
+    'mod_mail',
+
+    'voice_rooms',
+    'activity_tracking'
+);
+
+CREATE TABLE IF NOT EXISTS guild_modules (
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    guild_id SNOWFLAKE NOT NULL,
+    module_type guild_module_type NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+
+    PRIMARY KEY (guild_id, module_type),
+    FOREIGN KEY (guild_id)
+        REFERENCES guilds_registry (guild_id)
+        ON DELETE CASCADE
+);
+
 CREATE TYPE action_log_type AS ENUM (
     'guild_settings_update'
 );
@@ -52,6 +78,7 @@ CREATE TYPE event_log_type AS ENUM (
     'user_kick',
     'user_ban',
     'user_unban',
+    'user_timeout',
     'user_roles_update',
     'user_nickname_update',
     'user_voice_join',

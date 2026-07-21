@@ -71,6 +71,52 @@ func newInfractionEntryFromDetails(d gen.ModerationCaseDetail) *InfractionEntry 
 	return &e
 }
 
+type InfractionSettings struct {
+	MutedRoleID                  *string
+	AppealDuration               int16
+	ShouldRequestInfractionProof bool
+	InfractionProofChannelID     *string
+}
+
+func (i *infractions) getConfiguration(ctx context.Context, guildId string) (*InfractionSettings, error) {
+	config, err := i.db.queries.GetGuildInfractionSettings(ctx, i.db.dbtx, guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	ic := &InfractionSettings{
+		AppealDuration:               config.AppealDuration,
+		ShouldRequestInfractionProof: config.RequestInfractionProof,
+	}
+
+	if config.MutedRoleID.Valid {
+		ic.MutedRoleID = &config.MutedRoleID.String
+	}
+
+	if config.InfractionProofID.Valid {
+		ic.InfractionProofChannelID = &config.InfractionProofID.String
+	}
+
+	return ic, nil
+}
+
+func (i *infractions) GetOrCreateConfiguration(ctx context.Context, guildId string) (*InfractionSettings, error) {
+	config, err := i.getConfiguration(ctx, guildId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			if err := i.db.queries.RegisterInfractionSettingsIfMissing(ctx, i.db.dbtx, guildId); err != nil {
+				return nil, err
+			}
+
+			return i.getConfiguration(ctx, guildId)
+		}
+
+		return nil, err
+	}
+
+	return config, nil
+}
+
 func (i *infractions) GetExpiringInfractions(ctx context.Context, cutoff time.Time) ([]InfractionEntry, error) {
 	expiring, err := i.db.queries.GetExpiringInfractionCases(ctx, i.db.dbtx, NullableTimeToTimestamptz(&cutoff))
 	if err != nil {
@@ -89,10 +135,6 @@ func (i *infractions) GetExpiringInfractions(ctx context.Context, cutoff time.Ti
 //
 // This is for when the Discord API errors, it allows rolling back the transaction so unnecessary data is not stored.
 func (i *infractions) InfractMemberWithCallback(ctx context.Context, guildId, memberId, moderatorId string, action ModerationAction, duration *time.Duration, reason *string, appealable *bool, cb func(e InfractionEntry) error) (*InfractionEntry, error) {
-	if _, err := i.db.GuildSettings.GetOrCreateGuildSettings(ctx, guildId); err != nil {
-		return nil, err
-	}
-
 	entry := InfractionEntry{
 		MemberID:    memberId,
 		ModeratorID: moderatorId,

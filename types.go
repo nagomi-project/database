@@ -31,6 +31,7 @@ const (
 	EventLogTypeUserKick           = gen.EventLogTypeUserKick
 	EventLogTypeUserBan            = gen.EventLogTypeUserBan
 	EventLogTypeUserUnban          = gen.EventLogTypeUserUnban
+	EventLogTypeUserTimeout        = gen.EventLogTypeUserTimeout
 	EventLogTypeUserRolesUpdate    = gen.EventLogTypeUserRolesUpdate
 	EventLogTypeUserNicknameUpdate = gen.EventLogTypeUserNicknameUpdate
 	EventLogTypeUserVoiceJoin      = gen.EventLogTypeUserVoiceJoin
@@ -71,4 +72,16 @@ const (
 	AppealStatusDenied    = gen.AppealStatusDenied
 	AppealStatusBlocked   = gen.AppealStatusBlocked
 	AppealStatusUnblocked = gen.AppealStatusUnblocked
+)
+
+type GuildModuleType = gen.GuildModuleType
+
+const (
+	GuildModuleTypeInfractions      = gen.GuildModuleTypeInfractions
+	GuildModuleTypeBanAppeals       = gen.GuildModuleTypeBanAppeals
+	GuildModuleTypeEventLogs        = gen.GuildModuleTypeEventLogs
+	GuildModuleTypeTickets          = gen.GuildModuleTypeTickets
+	GuildModuleTypeModMail          = gen.GuildModuleTypeModMail
+	GuildModuleTypeVoiceRooms       = gen.GuildModuleTypeVoiceRooms
+	GuildModuleTypeActivityTracking = gen.GuildModuleTypeActivityTracking
 )

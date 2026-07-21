@@ -199,6 +199,7 @@ const (
 	EventLogTypeUserKick           EventLogType = "user_kick"
 	EventLogTypeUserBan            EventLogType = "user_ban"
 	EventLogTypeUserUnban          EventLogType = "user_unban"
+	EventLogTypeUserTimeout        EventLogType = "user_timeout"
 	EventLogTypeUserRolesUpdate    EventLogType = "user_roles_update"
 	EventLogTypeUserNicknameUpdate EventLogType = "user_nickname_update"
 	EventLogTypeUserVoiceJoin      EventLogType = "user_voice_join"
@@ -260,6 +261,7 @@ func (e EventLogType) Valid() bool {
 		EventLogTypeUserKick,
 		EventLogTypeUserBan,
 		EventLogTypeUserUnban,
+		EventLogTypeUserTimeout,
 		EventLogTypeUserRolesUpdate,
 		EventLogTypeUserNicknameUpdate,
 		EventLogTypeUserVoiceJoin,
@@ -289,6 +291,7 @@ func AllEventLogTypeValues() []EventLogType {
 		EventLogTypeUserKick,
 		EventLogTypeUserBan,
 		EventLogTypeUserUnban,
+		EventLogTypeUserTimeout,
 		EventLogTypeUserRolesUpdate,
 		EventLogTypeUserNicknameUpdate,
 		EventLogTypeUserVoiceJoin,
@@ -306,6 +309,79 @@ func AllEventLogTypeValues() []EventLogType {
 		EventLogTypeEmojiCreate,
 		EventLogTypeEmojiUpdate,
 		EventLogTypeEmojiDelete,
+	}
+}
+
+type GuildModuleType string
+
+const (
+	GuildModuleTypeInfractions      GuildModuleType = "infractions"
+	GuildModuleTypeBanAppeals       GuildModuleType = "ban_appeals"
+	GuildModuleTypeEventLogs        GuildModuleType = "event_logs"
+	GuildModuleTypeTickets          GuildModuleType = "tickets"
+	GuildModuleTypeModMail          GuildModuleType = "mod_mail"
+	GuildModuleTypeVoiceRooms       GuildModuleType = "voice_rooms"
+	GuildModuleTypeActivityTracking GuildModuleType = "activity_tracking"
+)
+
+func (e *GuildModuleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GuildModuleType(s)
+	case string:
+		*e = GuildModuleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GuildModuleType: %T", src)
+	}
+	return nil
+}
+
+type NullGuildModuleType struct {
+	GuildModuleType GuildModuleType
+	Valid           bool // Valid is true if GuildModuleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGuildModuleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.GuildModuleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GuildModuleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGuildModuleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GuildModuleType), nil
+}
+
+func (e GuildModuleType) Valid() bool {
+	switch e {
+	case GuildModuleTypeInfractions,
+		GuildModuleTypeBanAppeals,
+		GuildModuleTypeEventLogs,
+		GuildModuleTypeTickets,
+		GuildModuleTypeModMail,
+		GuildModuleTypeVoiceRooms,
+		GuildModuleTypeActivityTracking:
+		return true
+	}
+	return false
+}
+
+func AllGuildModuleTypeValues() []GuildModuleType {
+	return []GuildModuleType{
+		GuildModuleTypeInfractions,
+		GuildModuleTypeBanAppeals,
+		GuildModuleTypeEventLogs,
+		GuildModuleTypeTickets,
+		GuildModuleTypeModMail,
+		GuildModuleTypeVoiceRooms,
+		GuildModuleTypeActivityTracking,
 	}
 }
 
@@ -429,6 +505,14 @@ type EventLogSetting struct {
 	GuildID         string
 	IgnoredChannels []string
 	IgnoreRoles     []string
+}
+
+type GuildModule struct {
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	GuildID    string
+	ModuleType GuildModuleType
+	Enabled    bool
 }
 
 type GuildsRegistry struct {

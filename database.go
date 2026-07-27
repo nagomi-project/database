@@ -19,13 +19,14 @@ type Database struct {
 	dbtx    gen.DBTX
 	queries *gen.Queries
 
+	OAuth     *oAuth
 	Modules   *modules
 	Guild     *guild
 	ActionLog *actionLog
 
-	EventLog    *eventLog
-	Infractions *infractions
-	OAuth       *oAuth
+	EventLog      *eventLog
+	Infractions   *infractions
+	MessageEmbeds *messageEmbeds
 }
 
 // NewDatabase will return a new Database object that can be used for database operations.
@@ -41,13 +42,14 @@ func NewDatabase(pool *pgxpool.Pool) *Database {
 
 // init will initalize all of the stores for the database.
 func (db *Database) init() *Database {
+	db.OAuth = newOAuth(db)
 	db.Modules = newModules(db)
 	db.Guild = newGuildSettings(db)
 	db.ActionLog = newActionLog(db)
 
 	db.Infractions = newInfractions(db)
 	db.EventLog = newEventLog(db)
-	db.OAuth = newOAuth(db)
+	db.MessageEmbeds = newMessageEmbeds(db)
 
 	return db
 }

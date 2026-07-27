@@ -322,6 +322,7 @@ const (
 	GuildModuleTypeModMail          GuildModuleType = "mod_mail"
 	GuildModuleTypeVoiceRooms       GuildModuleType = "voice_rooms"
 	GuildModuleTypeActivityTracking GuildModuleType = "activity_tracking"
+	GuildModuleTypeMessageEmbeds    GuildModuleType = "message_embeds"
 )
 
 func (e *GuildModuleType) Scan(src interface{}) error {
@@ -367,7 +368,8 @@ func (e GuildModuleType) Valid() bool {
 		GuildModuleTypeTickets,
 		GuildModuleTypeModMail,
 		GuildModuleTypeVoiceRooms,
-		GuildModuleTypeActivityTracking:
+		GuildModuleTypeActivityTracking,
+		GuildModuleTypeMessageEmbeds:
 		return true
 	}
 	return false
@@ -382,6 +384,7 @@ func AllGuildModuleTypeValues() []GuildModuleType {
 		GuildModuleTypeModMail,
 		GuildModuleTypeVoiceRooms,
 		GuildModuleTypeActivityTracking,
+		GuildModuleTypeMessageEmbeds,
 	}
 }
 
@@ -504,7 +507,8 @@ type EventLogSetting struct {
 	UpdatedAt       pgtype.Timestamptz
 	GuildID         string
 	IgnoredChannels []string
-	IgnoreRoles     []string
+	IgnoredRoles    []string
+	IgnoreBots      bool
 }
 
 type GuildModule struct {
@@ -548,6 +552,15 @@ type InfractionSetting struct {
 	AppealDuration         int16
 	InfractionProofID      pgtype.Text
 	RequestInfractionProof bool
+}
+
+type MessageEmbedSetting struct {
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	GuildID               string
+	IgnoredChannels       []string
+	IgnoredRoles          []string
+	AllowCrossGuildEmbeds bool
 }
 
 type ModerationCase struct {

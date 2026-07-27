@@ -84,4 +84,5 @@ const (
 	GuildModuleTypeModMail          = gen.GuildModuleTypeModMail
 	GuildModuleTypeVoiceRooms       = gen.GuildModuleTypeVoiceRooms
 	GuildModuleTypeActivityTracking = gen.GuildModuleTypeActivityTracking
+	GuildModuleTypeMessageEmbeds    = gen.GuildModuleTypeMessageEmbeds
 )

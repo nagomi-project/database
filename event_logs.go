@@ -36,6 +36,10 @@ type EventLogChannel struct {
 	ChannelUpdate *string
 	ChannelDelete *string
 
+	RoleCreate *string
+	RoleUpdate *string
+	RoleDelete *string
+
 	EmojiCreate *string
 	EmojiUpdate *string
 	EmojiDelete *string
@@ -78,6 +82,12 @@ func (e *eventLog) formatLogChannels(channels []gen.EventLogChannel) *EventLogCh
 			logChannels.ChannelUpdate = &channel.ChannelID
 		case EventLogTypeChannelDelete:
 			logChannels.ChannelDelete = &channel.ChannelID
+		case EventLogTypeRoleCreate:
+			logChannels.RoleCreate = &channel.ChannelID
+		case EventLogTypeRoleUpdate:
+			logChannels.RoleUpdate = &channel.ChannelID
+		case EventLogTypeRoleDelete:
+			logChannels.RoleDelete = &channel.ChannelID
 		case EventLogTypeEmojiCreate:
 			logChannels.EmojiCreate = &channel.ChannelID
 		case EventLogTypeEmojiUpdate:
@@ -93,6 +103,7 @@ func (e *eventLog) formatLogChannels(channels []gen.EventLogChannel) *EventLogCh
 type EventLogSettings struct {
 	IgnoreChannels []string
 	IgnoreRoles    []string
+	IgnoreBots     bool
 	Channels       EventLogChannel
 }
 
@@ -109,7 +120,8 @@ func (e *eventLog) getConfiguration(ctx context.Context, guildId string) (*Event
 
 	return &EventLogSettings{
 		IgnoreChannels: config.IgnoredChannels,
-		IgnoreRoles:    config.IgnoreRoles,
+		IgnoreRoles:    config.IgnoredRoles,
+		IgnoreBots:     config.IgnoreBots,
 		Channels:       *channels,
 	}, nil
 }
@@ -175,20 +187,83 @@ func (e *eventLog) CreateOrUpdateLogChannel(ctx context.Context, guildId, channe
 	return channel, nil
 }
 
-func (e *eventLog) CreateOrUpdateManyLogChannels(ctx context.Context, guildId string, channelIds map[string]LogChannelType, source ActionLogSource) ([]gen.EventLogChannel, error) {
+func (e *eventLog) CreateOrUpdateManyLogChannels(ctx context.Context, guildId string, channelIds map[LogChannelType]*string, source ActionLogSource) ([]gen.EventLogChannel, error) {
+	var channels []gen.EventLogChannel
+	if err := e.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
+		var err error
+		channels, err = txDb.EventLog.createOrUpdateManyLogChannels(ctx, guildId, channelIds, source)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return channels, nil
+}
+
+func (e *eventLog) createOrUpdateManyLogChannels(ctx context.Context, guildId string, channelIds map[LogChannelType]*string, source ActionLogSource) ([]gen.EventLogChannel, error) {
 	var (
-		ids   []string
-		types []LogChannelType
+		ids         []string
+		types       []string
+		removeTypes []string
 	)
 
-	for id, t := range channelIds {
-		ids = append(ids, id)
-		types = append(types, t)
+	for t, id := range channelIds {
+		if !t.Valid() {
+			return nil, fmt.Errorf("invalid event log type: %q", t)
+		}
+		if id == nil || *id == "" {
+			removeTypes = append(removeTypes, string(t))
+			continue
+		}
+
+		ids = append(ids, *id)
+		types = append(types, string(t))
+	}
+
+	if len(removeTypes) > 0 {
+		if _, err := e.db.queries.RemoveManyLogChannels(ctx, e.db.dbtx, gen.RemoveManyLogChannelsParams{
+			GuildID: guildId,
+			Types:   removeTypes,
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
 	return e.db.queries.UpsertManyLogChannels(ctx, e.db.dbtx, gen.UpsertManyLogChannelsParams{
+		GuildID:    guildId,
 		ChannelIds: ids,
 		Types:      types,
+	})
+}
+
+func (e *eventLog) UpdateConfiguration(ctx context.Context, guildId string, enabled, ignoreBots bool, ignoredChannels, ignoredRoles []string, channelIds map[LogChannelType]*string) error {
+	return e.db.withTx(ctx, func(ctx context.Context, txDb *Database) error {
+		if err := txDb.queries.ToggleModule(ctx, txDb.dbtx, gen.ToggleModuleParams{
+			GuildID:    guildId,
+			ModuleType: gen.GuildModuleTypeEventLogs,
+			Enabled:    enabled,
+		}); err != nil {
+			return err
+		}
+
+		if _, err := txDb.queries.UpsertEventLogSettings(ctx, txDb.dbtx, gen.UpsertEventLogSettingsParams{
+			GuildID:         guildId,
+			IgnoredChannels: ignoredChannels,
+			IgnoredRoles:    ignoredRoles,
+			IgnoreBots:      ignoreBots,
+		}); err != nil {
+			return err
+		}
+
+		if _, err := txDb.EventLog.createOrUpdateManyLogChannels(ctx, guildId, channelIds, ActionLogSourcePanel); err != nil {
+			return err
+		}
+
+		return nil
 	})
 }
 

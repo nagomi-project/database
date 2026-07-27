@@ -43,7 +43,7 @@ func (q *Queries) GetEventLogChannels(ctx context.Context, db DBTX, guildID stri
 }
 
 const getEventLogSettings = `-- name: GetEventLogSettings :one
-SELECT created_at, updated_at, guild_id, ignored_channels, ignore_roles FROM event_log_settings
+SELECT created_at, updated_at, guild_id, ignored_channels, ignored_roles, ignore_bots FROM event_log_settings
 WHERE
     guild_id = $1
 `
@@ -57,7 +57,8 @@ func (q *Queries) GetEventLogSettings(ctx context.Context, db DBTX, guildID stri
 		&i.UpdatedAt,
 		&i.GuildID,
 		&i.IgnoredChannels,
-		&i.IgnoreRoles,
+		&i.IgnoredRoles,
+		&i.IgnoreBots,
 	)
 	return i, err
 }
@@ -72,6 +73,91 @@ ON CONFLICT (guild_id) DO NOTHING
 func (q *Queries) RegisterEventLogSettingsIfMissing(ctx context.Context, db DBTX, guildID string) error {
 	_, err := db.Exec(ctx, registerEventLogSettingsIfMissing, guildID)
 	return err
+}
+
+const removeManyLogChannels = `-- name: RemoveManyLogChannels :many
+DELETE FROM event_log_channels
+WHERE
+    guild_id = $1
+    AND type IN (
+        SELECT types.type::event_log_type
+        FROM unnest(CAST($2 AS TEXT[])) AS types(type)
+    )
+RETURNING created_at, updated_at, type, guild_id, channel_id
+`
+
+type RemoveManyLogChannelsParams struct {
+	GuildID string
+	Types   []string
+}
+
+// Removes many log channels based on their type.
+func (q *Queries) RemoveManyLogChannels(ctx context.Context, db DBTX, arg RemoveManyLogChannelsParams) ([]EventLogChannel, error) {
+	rows, err := db.Query(ctx, removeManyLogChannels, arg.GuildID, arg.Types)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventLogChannel
+	for rows.Next() {
+		var i EventLogChannel
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Type,
+			&i.GuildID,
+			&i.ChannelID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const upsertEventLogSettings = `-- name: UpsertEventLogSettings :one
+INSERT INTO event_log_settings (guild_id, ignored_channels, ignored_roles, ignore_bots)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4
+)
+ON CONFLICT (guild_id) DO UPDATE SET
+    updated_at = now(),
+    ignored_channels = EXCLUDED.ignored_channels,
+    ignored_roles = EXCLUDED.ignored_roles,
+    ignore_bots = EXCLUDED.ignore_bots
+RETURNING created_at, updated_at, guild_id, ignored_channels, ignored_roles, ignore_bots
+`
+
+type UpsertEventLogSettingsParams struct {
+	GuildID         string
+	IgnoredChannels []string
+	IgnoredRoles    []string
+	IgnoreBots      bool
+}
+
+func (q *Queries) UpsertEventLogSettings(ctx context.Context, db DBTX, arg UpsertEventLogSettingsParams) (EventLogSetting, error) {
+	row := db.QueryRow(ctx, upsertEventLogSettings,
+		arg.GuildID,
+		arg.IgnoredChannels,
+		arg.IgnoredRoles,
+		arg.IgnoreBots,
+	)
+	var i EventLogSetting
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GuildID,
+		&i.IgnoredChannels,
+		&i.IgnoredRoles,
+		&i.IgnoreBots,
+	)
+	return i, err
 }
 
 const upsertLogChannel = `-- name: UpsertLogChannel :one
@@ -105,10 +191,10 @@ func (q *Queries) UpsertLogChannel(ctx context.Context, db DBTX, arg UpsertLogCh
 
 const upsertManyLogChannels = `-- name: UpsertManyLogChannels :many
 INSERT INTO event_log_channels (type, guild_id, channel_id)
-SELECT types.type, $1, channels.channel_id
-FROM unnest(CAST($2 AS event_log_type[]))
+SELECT types.type::event_log_type, $1, channels.channel_id::SNOWFLAKE
+FROM unnest(CAST($2 AS TEXT[]))
     WITH ORDINALITY AS types(type, position)
-JOIN unnest(CAST($3 AS SNOWFLAKE[]))
+JOIN unnest(CAST($3 AS TEXT[]))
     WITH ORDINALITY AS channels(channel_id, position)
     USING (position)
 ON CONFLICT (guild_id, type) DO UPDATE SET
@@ -119,7 +205,7 @@ RETURNING created_at, updated_at, type, guild_id, channel_id
 
 type UpsertManyLogChannelsParams struct {
 	GuildID    string
-	Types      []EventLogType
+	Types      []string
 	ChannelIds []string
 }
 

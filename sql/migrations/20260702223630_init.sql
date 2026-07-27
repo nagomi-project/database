@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS event_log_settings (
     guild_id SNOWFLAKE NOT NULL,
 
     ignored_channels SNOWFLAKE[],
-    ignore_roles SNOWFLAKE[],
+    ignored_roles SNOWFLAKE[],
+    ignore_bots BOOLEAN NOT NULL DEFAULT false,
 
     PRIMARY KEY (guild_id),
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE

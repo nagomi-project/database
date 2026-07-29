@@ -19,7 +19,9 @@ CREATE TABLE IF NOT EXISTS message_embed_settings (
     allow_cross_guild_embeds BOOLEAN NOT NULL DEFAULT FALSE,
 
     PRIMARY KEY (guild_id),
-    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+    FOREIGN KEY (guild_id)
+        REFERENCES guilds_registry (guild_id)
+        ON DELETE CASCADE
 );
 
 -- +goose Down

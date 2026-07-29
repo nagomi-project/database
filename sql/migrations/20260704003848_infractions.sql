@@ -35,6 +35,19 @@ CREATE TABLE IF NOT EXISTS moderation_case_counters (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS infraction_categories (
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    guild_id SNOWFLAKE NOT NULL,
+    name TEXT NOT NULL,
+
+    PRIMARY KEY (guild_id, name),
+    FOREIGN KEY (guild_id)
+        REFERENCES guilds_registry (guild_id)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS moderation_cases (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -47,10 +60,17 @@ CREATE TABLE IF NOT EXISTS moderation_cases (
 
     hidden BOOLEAN NOT NULL DEFAULT FALSE,
     action moderation_action NOT NULL,
+    category TEXT,
     reason VARCHAR(512),
 
     PRIMARY KEY (guild_id, case_number),
-    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+    FOREIGN KEY (guild_id)
+        REFERENCES guilds_registry (guild_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (guild_id, category)
+        REFERENCES infraction_categories (guild_id, name)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL (category)
 );
 
 CREATE TABLE IF NOT EXISTS moderation_case_proof_messages (
@@ -59,7 +79,9 @@ CREATE TABLE IF NOT EXISTS moderation_case_proof_messages (
     message_url TEXT NOT NULL,
 
     PRIMARY KEY (guild_id, case_number),
-    FOREIGN KEY (guild_id, case_number) REFERENCES moderation_cases (guild_id, case_number) ON DELETE CASCADE
+    FOREIGN KEY (guild_id, case_number)
+        REFERENCES moderation_cases (guild_id, case_number)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS infraction_expiry_schedule (
@@ -72,7 +94,9 @@ CREATE TABLE IF NOT EXISTS infraction_expiry_schedule (
 
     PRIMARY KEY (guild_id, case_number),
     UNIQUE (guild_id, member_id, action),
-    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+    FOREIGN KEY (guild_id, case_number)
+        REFERENCES moderation_cases (guild_id, case_number)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS infraction_active_bans (
@@ -89,7 +113,9 @@ CREATE TABLE IF NOT EXISTS infraction_active_bans (
 
     PRIMARY KEY (guild_id, case_number),
     UNIQUE (guild_id, member_id),
-    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+    FOREIGN KEY (guild_id, case_number)
+        REFERENCES moderation_cases (guild_id, case_number)
+        ON DELETE CASCADE
 );
 
 CREATE TYPE appeal_status AS ENUM (
@@ -111,7 +137,9 @@ CREATE TABLE IF NOT EXISTS ban_appeal_logs (
     status appeal_status NOT NULL,
 
     PRIMARY KEY (log_id),
-    FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
+    FOREIGN KEY (guild_id, case_number)
+        REFERENCES moderation_cases (guild_id, case_number)
+        ON DELETE CASCADE
 );
 
 CREATE VIEW moderation_case_details AS
@@ -125,6 +153,7 @@ SELECT
     moderation_cases.moderator_id,
     moderation_cases.hidden,
     moderation_cases.action,
+    moderation_cases.category,
     moderation_cases.reason,
     CASE
         WHEN infraction_expiry_schedule.case_number IS NOT NULL THEN TRUE
@@ -227,6 +256,7 @@ DROP TABLE IF EXISTS infraction_active_bans;
 DROP TABLE IF EXISTS infraction_expiry_schedule;
 DROP TABLE IF EXISTS moderation_case_proof_messages;
 DROP TABLE IF EXISTS moderation_cases;
+DROP TABLE IF EXISTS infraction_categories;
 DROP TABLE IF EXISTS moderation_case_counters;
 DROP TABLE IF EXISTS infraction_settings;
 

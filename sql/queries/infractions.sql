@@ -64,6 +64,21 @@ SELECT * FROM moderation_case_details
 WHERE guild_id = @guild_id AND member_id = @member_id
 ORDER BY case_number DESC;
 
+-- name: GetInfractionCategoryAnalytics :many
+-- Fetches daily categorized infraction counts for the current day and previous six days.
+SELECT
+    created_at AS date,
+    category,
+    COUNT(*) AS count
+FROM moderation_cases
+WHERE
+    guild_id = @guild_id
+    AND category IS NOT NULL
+    AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+    AND created_at < CURRENT_DATE + INTERVAL '1 day'
+GROUP BY created_at, category
+ORDER BY date, category;
+
 -- name: GetActiveMuteInfraction :one
 -- Fetches an active mute infraction for a member.
 SELECT * FROM moderation_case_details
@@ -240,3 +255,28 @@ WHERE
     AND member_id = @member_id
     AND action = @action
 RETURNING *;
+
+-- name: UpsertInfractionCatgory :one
+-- Creates a new infraction category.
+INSERT INTO infraction_categories (
+    guild_id,
+    name
+)
+VALUES (
+    @guild_id,
+    @category_name
+)
+ON CONFLICT (guild_id, name) DO UPDATE
+SET
+    updated_at = now(),
+    name = EXCLUDED.name
+RETURNING *;
+
+-- name: RemoveInfractionCategory :exec
+-- Removes an infraction category.
+-- This will result in all cases with the specified
+-- category to have its category set to null.
+DELETE FROM infraction_categories
+WHERE
+    guild_id = @guild_id
+    AND name = @catgory_name;

@@ -41,7 +41,7 @@ func (q *Queries) GetActiveBan(ctx context.Context, db DBTX, arg GetActiveBanPar
 }
 
 const getActiveBanInfraction = `-- name: GetActiveBanInfraction :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
@@ -68,6 +68,7 @@ func (q *Queries) GetActiveBanInfraction(ctx context.Context, db DBTX, arg GetAc
 		&i.ModeratorID,
 		&i.Hidden,
 		&i.Action,
+		&i.Category,
 		&i.Reason,
 		&i.Active,
 		&i.Appealable,
@@ -77,7 +78,7 @@ func (q *Queries) GetActiveBanInfraction(ctx context.Context, db DBTX, arg GetAc
 }
 
 const getActiveMuteInfraction = `-- name: GetActiveMuteInfraction :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
@@ -104,6 +105,7 @@ func (q *Queries) GetActiveMuteInfraction(ctx context.Context, db DBTX, arg GetA
 		&i.ModeratorID,
 		&i.Hidden,
 		&i.Action,
+		&i.Category,
 		&i.Reason,
 		&i.Active,
 		&i.Appealable,
@@ -155,7 +157,7 @@ func (q *Queries) GetBanAppealLogsByCaseId(ctx context.Context, db DBTX, arg Get
 }
 
 const getExpiringInfractionCases = `-- name: GetExpiringInfractionCases :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     active = TRUE
     AND expires_at <= $1
@@ -181,6 +183,7 @@ func (q *Queries) GetExpiringInfractionCases(ctx context.Context, db DBTX, cutof
 			&i.ModeratorID,
 			&i.Hidden,
 			&i.Action,
+			&i.Category,
 			&i.Reason,
 			&i.Active,
 			&i.Appealable,
@@ -220,7 +223,7 @@ func (q *Queries) GetGuildInfractionSettings(ctx context.Context, db DBTX, guild
 }
 
 const getInfractionByCaseId = `-- name: GetInfractionByCaseId :one
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND case_number = $2
@@ -245,6 +248,7 @@ func (q *Queries) GetInfractionByCaseId(ctx context.Context, db DBTX, arg GetInf
 		&i.ModeratorID,
 		&i.Hidden,
 		&i.Action,
+		&i.Category,
 		&i.Reason,
 		&i.Active,
 		&i.Appealable,
@@ -253,8 +257,50 @@ func (q *Queries) GetInfractionByCaseId(ctx context.Context, db DBTX, arg GetInf
 	return i, err
 }
 
+const getInfractionCategoryAnalytics = `-- name: GetInfractionCategoryAnalytics :many
+SELECT
+    created_at AS date,
+    category,
+    COUNT(*) AS count
+FROM moderation_cases
+WHERE
+    guild_id = $1
+    AND category IS NOT NULL
+    AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+    AND created_at < CURRENT_DATE + INTERVAL '1 day'
+GROUP BY created_at, category
+ORDER BY date, category
+`
+
+type GetInfractionCategoryAnalyticsRow struct {
+	Date     pgtype.Timestamptz
+	Category pgtype.Text
+	Count    int64
+}
+
+// Fetches daily categorized infraction counts for the current day and previous six days.
+func (q *Queries) GetInfractionCategoryAnalytics(ctx context.Context, db DBTX, guildID string) ([]GetInfractionCategoryAnalyticsRow, error) {
+	rows, err := db.Query(ctx, getInfractionCategoryAnalytics, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInfractionCategoryAnalyticsRow
+	for rows.Next() {
+		var i GetInfractionCategoryAnalyticsRow
+		if err := rows.Scan(&i.Date, &i.Category, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMemberInfractions = `-- name: GetMemberInfractions :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE guild_id = $1 AND member_id = $2
 ORDER BY case_number DESC
 `
@@ -284,6 +330,7 @@ func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemb
 			&i.ModeratorID,
 			&i.Hidden,
 			&i.Action,
+			&i.Category,
 			&i.Reason,
 			&i.Active,
 			&i.Appealable,
@@ -300,7 +347,7 @@ func (q *Queries) GetMemberInfractions(ctx context.Context, db DBTX, arg GetMemb
 }
 
 const getMemberInfractionsPage = `-- name: GetMemberInfractionsPage :many
-SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason, active, appealable, message_url FROM moderation_case_details
+SELECT created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason, active, appealable, message_url FROM moderation_case_details
 WHERE
     guild_id = $1
     AND member_id = $2
@@ -344,6 +391,7 @@ func (q *Queries) GetMemberInfractionsPage(ctx context.Context, db DBTX, arg Get
 			&i.ModeratorID,
 			&i.Hidden,
 			&i.Action,
+			&i.Category,
 			&i.Reason,
 			&i.Active,
 			&i.Appealable,
@@ -421,7 +469,7 @@ SELECT
     $5,
     $6
 FROM next_case
-RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason
+RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason
 `
 
 type InfractMemberParams struct {
@@ -454,6 +502,7 @@ func (q *Queries) InfractMember(ctx context.Context, db DBTX, arg InfractMemberP
 		&i.ModeratorID,
 		&i.Hidden,
 		&i.Action,
+		&i.Category,
 		&i.Reason,
 	)
 	return i, err
@@ -625,6 +674,26 @@ func (q *Queries) RemoveActiveBan(ctx context.Context, db DBTX, arg RemoveActive
 	return err
 }
 
+const removeInfractionCategory = `-- name: RemoveInfractionCategory :exec
+DELETE FROM infraction_categories
+WHERE
+    guild_id = $1
+    AND name = $2
+`
+
+type RemoveInfractionCategoryParams struct {
+	GuildID     string
+	CatgoryName string
+}
+
+// Removes an infraction category.
+// This will result in all cases with the specified
+// category to have its category set to null.
+func (q *Queries) RemoveInfractionCategory(ctx context.Context, db DBTX, arg RemoveInfractionCategoryParams) error {
+	_, err := db.Exec(ctx, removeInfractionCategory, arg.GuildID, arg.CatgoryName)
+	return err
+}
+
 const scheduleInfraction = `-- name: ScheduleInfraction :one
 INSERT INTO infraction_expiry_schedule (
     expires_at,
@@ -774,9 +843,9 @@ WITH updated_case AS (
     WHERE
         moderation_cases.guild_id = $3
         AND moderation_cases.case_number = $4
-    RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, reason
+    RETURNING created_at, updated_at, expires_at, guild_id, case_number, member_id, moderator_id, hidden, action, category, reason
 )
-SELECT moderation_case_details.created_at, moderation_case_details.updated_at, moderation_case_details.expires_at, moderation_case_details.guild_id, moderation_case_details.case_number, moderation_case_details.member_id, moderation_case_details.moderator_id, moderation_case_details.hidden, moderation_case_details.action, moderation_case_details.reason, moderation_case_details.active, moderation_case_details.appealable, moderation_case_details.message_url
+SELECT moderation_case_details.created_at, moderation_case_details.updated_at, moderation_case_details.expires_at, moderation_case_details.guild_id, moderation_case_details.case_number, moderation_case_details.member_id, moderation_case_details.moderator_id, moderation_case_details.hidden, moderation_case_details.action, moderation_case_details.category, moderation_case_details.reason, moderation_case_details.active, moderation_case_details.appealable, moderation_case_details.message_url
 FROM moderation_case_details
 JOIN updated_case ON
     updated_case.guild_id = moderation_case_details.guild_id
@@ -809,10 +878,45 @@ func (q *Queries) UpdateInfractionCaseDetails(ctx context.Context, db DBTX, arg 
 		&i.ModeratorID,
 		&i.Hidden,
 		&i.Action,
+		&i.Category,
 		&i.Reason,
 		&i.Active,
 		&i.Appealable,
 		&i.MessageUrl,
+	)
+	return i, err
+}
+
+const upsertInfractionCatgory = `-- name: UpsertInfractionCatgory :one
+INSERT INTO infraction_categories (
+    guild_id,
+    name
+)
+VALUES (
+    $1,
+    $2
+)
+ON CONFLICT (guild_id, name) DO UPDATE
+SET
+    updated_at = now(),
+    name = EXCLUDED.name
+RETURNING created_at, updated_at, guild_id, name
+`
+
+type UpsertInfractionCatgoryParams struct {
+	GuildID      string
+	CategoryName string
+}
+
+// Creates a new infraction category.
+func (q *Queries) UpsertInfractionCatgory(ctx context.Context, db DBTX, arg UpsertInfractionCatgoryParams) (InfractionCategory, error) {
+	row := db.QueryRow(ctx, upsertInfractionCatgory, arg.GuildID, arg.CategoryName)
+	var i InfractionCategory
+	err := row.Scan(
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GuildID,
+		&i.Name,
 	)
 	return i, err
 }

@@ -536,6 +536,13 @@ type InfractionActiveBan struct {
 	AppealableAt    pgtype.Timestamptz
 }
 
+type InfractionCategory struct {
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	GuildID   string
+	Name      string
+}
+
 type InfractionExpirySchedule struct {
 	ExpiresAt  pgtype.Timestamptz
 	GuildID    string
@@ -573,6 +580,7 @@ type ModerationCase struct {
 	ModeratorID string
 	Hidden      bool
 	Action      ModerationAction
+	Category    pgtype.Text
 	Reason      pgtype.Text
 }
 
@@ -591,6 +599,7 @@ type ModerationCaseDetail struct {
 	ModeratorID string
 	Hidden      bool
 	Action      ModerationAction
+	Category    pgtype.Text
 	Reason      pgtype.Text
 	Active      bool
 	Appealable  bool

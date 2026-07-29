@@ -30,6 +30,7 @@ type InfractionEntry struct {
 	ModeratorID string
 
 	Action   ModerationAction
+	Category *string
 	Reason   *string
 	ProofURL *string
 
@@ -54,6 +55,10 @@ func newInfractionEntryFromDetails(d gen.ModerationCaseDetail) *InfractionEntry 
 		Active:     d.Active,
 		Appealable: d.Appealable,
 		Hidden:     d.Hidden,
+	}
+
+	if d.Category.Valid {
+		e.Category = &d.Category.String
 	}
 
 	if d.ExpiresAt.Valid {

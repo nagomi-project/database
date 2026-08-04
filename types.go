@@ -28,7 +28,6 @@ type LogChannelType = gen.EventLogType
 const (
 	EventLogTypeUserJoin           = gen.EventLogTypeUserJoin
 	EventLogTypeUserLeave          = gen.EventLogTypeUserLeave
-	EventLogTypeUserKick           = gen.EventLogTypeUserKick
 	EventLogTypeUserBan            = gen.EventLogTypeUserBan
 	EventLogTypeUserUnban          = gen.EventLogTypeUserUnban
 	EventLogTypeUserTimeout        = gen.EventLogTypeUserTimeout
@@ -39,7 +38,6 @@ const (
 	EventLogTypeUserVoiceLeave     = gen.EventLogTypeUserVoiceLeave
 	EventLogTypeMessageEdit        = gen.EventLogTypeMessageEdit
 	EventLogTypeMessageDelete      = gen.EventLogTypeMessageDelete
-	EventLogTypeMessageImageRemove = gen.EventLogTypeMessageImageRemove
 	EventLogTypeChannelCreate      = gen.EventLogTypeChannelCreate
 	EventLogTypeChannelUpdate      = gen.EventLogTypeChannelUpdate
 	EventLogTypeChannelDelete      = gen.EventLogTypeChannelDelete

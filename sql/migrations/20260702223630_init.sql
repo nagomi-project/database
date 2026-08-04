@@ -75,7 +75,6 @@ CREATE TABLE IF NOT EXISTS action_logs (
 CREATE TYPE event_log_type AS ENUM (
     'user_join',
     'user_leave',
-    'user_kick',
     'user_ban',
     'user_unban',
     'user_timeout',
@@ -87,7 +86,6 @@ CREATE TYPE event_log_type AS ENUM (
 
     'message_edit',
     'message_delete',
-    'message_image_remove',
 
     'channel_create',
     'channel_update',

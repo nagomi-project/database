@@ -126,7 +126,54 @@ CREATE TABLE IF NOT EXISTS event_log_channels (
     FOREIGN KEY (guild_id) REFERENCES guilds_registry (guild_id) ON DELETE CASCADE
 );
 
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION notify_database_version_changed()
+RETURNS TRIGGER AS $$
+DECLARE
+    old_version BIGINT;
+    new_version BIGINT;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        SELECT COALESCE(MAX(version_id), 0)
+        INTO old_version
+        FROM goose_db_version
+        WHERE id <> NEW.id
+            AND is_applied;
+
+        new_version := NEW.version_id;
+    ELSE
+        old_version := OLD.version_id;
+
+        SELECT COALESCE(MAX(version_id), 0)
+        INTO new_version
+        FROM goose_db_version
+        WHERE is_applied;
+    END IF;
+
+    PERFORM pg_notify(
+        'database_version_changed',
+        json_build_object(
+            'old_version', old_version,
+            'new_version', new_version
+        )::TEXT
+    );
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
+CREATE TRIGGER database_version_changed_notify
+AFTER INSERT OR DELETE ON goose_db_version
+FOR EACH ROW
+EXECUTE FUNCTION notify_database_version_changed();
+
 -- +goose Down
+
+DROP TRIGGER IF EXISTS database_version_changed_notify
+    ON goose_db_version;
+
+DROP FUNCTION IF EXISTS notify_database_version_changed();
 
 DROP TABLE IF EXISTS event_log_channels;
 DROP TABLE IF EXISTS event_log_settings;

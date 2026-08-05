@@ -11,20 +11,24 @@ import (
 )
 
 var (
-	infractionsChannel = "infraction_expiry_schedule_events"
+	databaseVersionChannel = "database_version_changed"
+	infractionsChannel     = "infraction_expiry_schedule_events"
 )
 
 type DatabaseNotifier struct {
 	conn *pgx.Conn
 
-	Infractions chan InfractionsNotificationEvent
+	DatabaseVersion chan DatabaseVersionEvent
+	Infractions     chan InfractionsNotificationEvent
 }
 
 // NewDatabaseNotifier will create a new DatabaseNotifier object that is used for listening for certain operations made.
 func NewDatabaseNotifier(conn *pgx.Conn) *DatabaseNotifier {
 	return &DatabaseNotifier{
-		conn:        conn,
-		Infractions: make(chan InfractionsNotificationEvent, 32),
+		conn: conn,
+
+		DatabaseVersion: make(chan DatabaseVersionEvent, 32),
+		Infractions:     make(chan InfractionsNotificationEvent, 32),
 	}
 }
 
@@ -43,6 +47,19 @@ func (n *DatabaseNotifier) dispatch(ctx context.Context, notif *pgconn.Notificat
 		case <-ctx.Done():
 			return nil
 		}
+	case databaseVersionChannel:
+		var event DatabaseVersionEvent
+
+		if err := json.Unmarshal([]byte(notif.Payload), &event); err != nil {
+			return err
+		}
+
+		select {
+		case n.DatabaseVersion <- event:
+			return nil
+		case <-ctx.Done():
+			return nil
+		}
 	default:
 		return nil
 	}
@@ -53,8 +70,13 @@ func (n *DatabaseNotifier) Run(ctx context.Context) error {
 	if _, err := n.conn.Exec(ctx, fmt.Sprintf("LISTEN %s", pgx.Identifier{infractionsChannel}.Sanitize())); err != nil {
 		return err
 	}
-	defer n.conn.Exec(ctx, fmt.Sprintf("UNSUBSCRIBE %s", pgx.Identifier{infractionsChannel}.Sanitize())) //nolint:errcheck
+	if _, err := n.conn.Exec(ctx, fmt.Sprintf("LISTEN %s", pgx.Identifier{databaseVersionChannel}.Sanitize())); err != nil {
+		return err
+	}
 
+	defer n.conn.Exec(ctx, fmt.Sprintf("UNLISTEN %s", pgx.Identifier{databaseVersionChannel}.Sanitize())) //nolint:errcheck
+	defer n.conn.Exec(ctx, fmt.Sprintf("UNLISTEN %s", pgx.Identifier{infractionsChannel}.Sanitize()))     //nolint:errcheck
+	defer close(n.DatabaseVersion)
 	defer close(n.Infractions)
 
 	for {
@@ -88,4 +110,9 @@ type InfractionsNotificationEvent struct {
 	GuildID    string              `json:"guild_id"`
 	MemberID   string              `json:"member_id"`
 	Action     ModerationAction    `json:"action"`
+}
+
+type DatabaseVersionEvent struct {
+	OldVersion int64 `json:"old_version"`
+	NewVersion int64 `json:"new_version"`
 }
